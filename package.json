@@ -1,0 +1,47 @@
+{
+  "name": "pm-telegram-hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Telegram Aggregator — Integration Service + Bot + Mini App over ClickUp / Wrike / Jira",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "dev:worker": "tsx watch src/worker.ts",
+    "build": "tsup",
+    "start": "node dist/server.js",
+    "start:worker": "node dist/worker.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "migrate": "tsx scripts/migrate.ts",
+    "tunnel": "tsx scripts/tunnel.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "bullmq": "^5.13.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.0.0",
+    "grammy": "^1.30.0",
+    "ioredis": "^5.4.1",
+    "pino": "^9.4.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.11.0",
+    "@types/node": "^22.7.0",
+    "@types/pg": "^8.11.10",
+    "pg": "^8.13.0",
+    "prettier": "^3.3.3",
+    "shadcn": "^4.13.0",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "typescript-eslint": "^8.7.0",
+    "vitest": "^2.1.1"
+  }
+}

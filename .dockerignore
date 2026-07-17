@@ -1,0 +1,17 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+docs
+openspec
+mini-app
+*.log
+coverage
+.claude
+.cursor
+.gemini
+.kimi
+.agents

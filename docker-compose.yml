@@ -1,0 +1,56 @@
+# Single-VPS deployment (spec §11). app + worker share the image; worker is
+# independently scalable (`docker compose up --scale worker=N`).
+services:
+  app:
+    build: .
+    command: node dist/server.js
+    env_file: .env
+    environment:
+      # Redis is reached at the service name within the compose network.
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    expose:
+      - "3000"
+
+  worker:
+    build: .
+    command: node dist/worker.js
+    env_file: .env
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/certs:/etc/letsencrypt:ro
+      - miniapp-dist:/usr/share/nginx/html:ro # Vite build, mounted in Phase 2
+    depends_on:
+      - app
+    restart: unless-stopped
+
+volumes:
+  redis-data:
+  miniapp-dist:
