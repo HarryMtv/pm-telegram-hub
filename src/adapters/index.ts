@@ -1,7 +1,7 @@
 import { ClickUpAdapter } from './clickup/index.js';
 import { JiraAdapter } from './jira/index.js';
-import { WrikeAdapter } from './wrike/index.js';
 import { registry } from './registry.js';
+import { WrikeAdapter } from './wrike/index.js';
 
 export { registry } from './registry.js';
 

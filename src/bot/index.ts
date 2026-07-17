@@ -2,7 +2,6 @@ import type { FastifyInstance } from 'fastify';
 
 import { config } from '../config/index.js';
 import { logger } from '../logger.js';
-
 import { registerCommands } from './commands.js';
 import { getBot } from './instance.js';
 

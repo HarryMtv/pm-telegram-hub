@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 const API = import.meta.env.VITE_API_URL ?? '';
 
 let token: string | null = localStorage.getItem('token');

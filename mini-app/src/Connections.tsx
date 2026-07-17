@@ -37,11 +37,7 @@ export function Connections() {
     refresh().catch((err: Error) => setStatus(err.message));
   }, []);
 
-  async function connect(
-    provider: string,
-    fields: CredentialField[],
-    form: HTMLFormElement,
-  ) {
+  async function connect(provider: string, fields: CredentialField[], form: HTMLFormElement) {
     setStatus(null);
     const fd = new FormData(form);
     const credentials: Record<string, string> = {};
@@ -94,7 +90,9 @@ export function Connections() {
             </div>
           ))}
           {a.capabilities.webhookSetup === 'admin-required' && (
-            <p style={{ opacity: 0.7, fontSize: 14 }}>Requires admin webhook setup — instructions shown after connect.</p>
+            <p style={{ opacity: 0.7, fontSize: 14 }}>
+              Requires admin webhook setup — instructions shown after connect.
+            </p>
           )}
           <button type="submit">Connect {a.id}</button>
         </form>

@@ -1,11 +1,10 @@
-import { describe, expect, it, beforeAll } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { hmacSha256 } from '../crypto/index.js';
 import type { UnifiedEvent } from '../models/unified.js';
-
 import { findStatusByCategory, shouldEnrich } from './contract-helpers.js';
 import { FakeAdapter } from './fake.js';
-import { UnknownProviderError, registry } from './registry.js';
+import { registry, UnknownProviderError } from './registry.js';
 
 /**
  * Conformance: the core drives any provider through the contract generically —
@@ -59,7 +58,9 @@ describe('webhook signature verification (raw body HMAC)', () => {
 describe('capabilities-driven core behavior', () => {
   it('enriches only minimal-payload providers', async () => {
     const minimal = new FakeAdapter({ capabilities: { webhookSetup: 'auto', payload: 'minimal' } });
-    const rich = new FakeAdapter({ capabilities: { webhookSetup: 'admin-required', payload: 'rich' } });
+    const rich = new FakeAdapter({
+      capabilities: { webhookSetup: 'admin-required', payload: 'rich' },
+    });
 
     expect(shouldEnrich(minimal)).toBe(true);
     expect(shouldEnrich(rich)).toBe(false);
@@ -89,6 +90,8 @@ describe('unified status resolution (inline buttons)', () => {
 
     // Missing category → undefined (workflow forbids it).
     expect(findStatusByCategory(statuses, 'cancelled')?.id).toBe('cancelled');
-    expect(findStatusByCategory([{ id: 'x', name: 'X', category: 'open' }], 'done')).toBeUndefined();
+    expect(
+      findStatusByCategory([{ id: 'x', name: 'X', category: 'open' }], 'done'),
+    ).toBeUndefined();
   });
 });

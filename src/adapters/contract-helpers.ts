@@ -1,5 +1,4 @@
 import type { StatusCategory, StatusDef } from '../models/unified.js';
-
 import type { ProviderAdapter } from './provider-adapter.js';
 
 /**

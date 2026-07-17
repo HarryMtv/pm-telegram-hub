@@ -1,5 +1,4 @@
 import type { UnifiedEvent } from '../models/unified.js';
-
 import { renderEvent } from './templates.js';
 
 interface Pending {

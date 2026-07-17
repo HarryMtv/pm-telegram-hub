@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 
-import type { StatusCategory, StatusDef, UnifiedEvent, UnifiedEventType } from '../../models/unified.js';
+import type {
+  StatusCategory,
+  StatusDef,
+  UnifiedEvent,
+  UnifiedEventType,
+} from '../../models/unified.js';
 
 /** Wrike webhook event name → unified event type (spec §4.2). */
 export const WRIKE_EVENT_MAP: Record<string, UnifiedEventType> = {
@@ -63,6 +68,9 @@ export function parseWrikeEvents(payload: unknown, provider = 'wrike'): UnifiedE
       dedupeKey,
       taskId: e.taskId ?? '',
       actor: e.eventAuthorId,
+      // actorId drives self-echo suppression (worker.fanOut) — without it, Wrike
+      // would echo the owner's own changes. Mirrors ClickUp's actorId handling.
+      actorId: e.eventAuthorId,
       details: {
         webhookId: e.webhookId,
         oldCustomStatusId: e.oldCustomStatusId,

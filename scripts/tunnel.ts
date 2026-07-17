@@ -1,8 +1,8 @@
 /**
  * Manage the ephemeral cloudflared tunnel + keep ClickUp pointed at it.
  *
- *   npm run tunnel                              restart tunnel, set APP_URL, re-register webhook
- *   npx tsx scripts/tunnel.ts https://<url>     re-register webhook for an ALREADY-running tunnel
+ *   pnpm tunnel                                 restart tunnel, set APP_URL, re-register webhook
+ *   pnpm tsx scripts/tunnel.ts https://<url>    re-register webhook for an ALREADY-running tunnel
  *
  * `trycloudflare` quick tunnels: new url each start, some never route, and
  * ClickUp suspends a webhook whose endpoint stops responding. So a restart must
@@ -21,7 +21,7 @@ import { exec } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 
 import { CLICKUP_WEBHOOK_EVENTS } from '../src/adapters/clickup/mapping.js';
-import { decryptJson, encrypt } from '../src/crypto/index.js';
+import { decryptJson, encrypt, hmacSha256 } from '../src/crypto/index.js';
 import { getSupabase } from '../src/db/client.js';
 
 const BASE = 'https://api.clickup.com/api/v2';
@@ -36,7 +36,9 @@ async function waitForUrl(timeoutMs = 30_000): Promise<string> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
-      const m = (await readFile(TUNNEL_LOG, 'utf8')).match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
+      const m = (await readFile(TUNNEL_LOG, 'utf8')).match(
+        /https:\/\/[a-z0-9-]+\.trycloudflare\.com/,
+      );
       if (m) return m[0] as string;
     } catch {
       // log not written yet
@@ -65,7 +67,9 @@ async function bringUpReachableTunnel(attempts = 2): Promise<string> {
     console.log(`attempt ${i}/${attempts}: restarting cloudflared (http2)…`);
     await sh("pkill -f 'cloudflared tunnel' 2>/dev/null");
     await sleep(1500);
-    await sh(`nohup cloudflared tunnel --protocol http2 --url http://localhost:${PORT} > ${TUNNEL_LOG} 2>&1 &`);
+    await sh(
+      `nohup cloudflared tunnel --protocol http2 --url http://localhost:${PORT} > ${TUNNEL_LOG} 2>&1 &`,
+    );
     let url: string;
     try {
       url = await waitForUrl();
@@ -83,7 +87,9 @@ async function bringUpReachableTunnel(attempts = 2): Promise<string> {
       console.log('  still not routable — trying a fresh tunnel');
     }
   }
-  throw new Error(`no reachable tunnel after ${attempts} attempts — trycloudflare can be flaky; run again or pass an existing url`);
+  throw new Error(
+    `no reachable tunnel after ${attempts} attempts — trycloudflare can be flaky; run again or pass an existing url`,
+  );
 }
 
 async function setEnvAppUrl(url: string): Promise<void> {
@@ -96,7 +102,11 @@ async function setEnvAppUrl(url: string): Promise<void> {
 
 async function reRegisterClickUpWebhook(newUrl: string): Promise<void> {
   const sb = getSupabase();
-  const { data: conn } = await sb.from('provider_connections').select().eq('provider', 'clickup').maybeSingle();
+  const { data: conn } = await sb
+    .from('provider_connections')
+    .select()
+    .eq('provider', 'clickup')
+    .maybeSingle();
   if (!conn) throw new Error('no clickup connection — run /connect clickup <token> first');
   const token = decryptJson<Record<string, string>>(conn.credentials).token;
   if (!token) throw new Error('connection has no token');
@@ -108,7 +118,9 @@ async function reRegisterClickUpWebhook(newUrl: string): Promise<void> {
   const teamId = teams?.[0]?.id;
   if (!teamId) throw new Error('token has no teams');
 
-  const { webhooks } = (await (await fetch(`${BASE}/team/${teamId}/webhook`, { headers: h })).json()) as {
+  const { webhooks } = (await (
+    await fetch(`${BASE}/team/${teamId}/webhook`, { headers: h })
+  ).json()) as {
     webhooks?: Array<{ id: string }>;
   };
   for (const w of webhooks ?? []) {
@@ -129,17 +141,98 @@ async function reRegisterClickUpWebhook(newUrl: string): Promise<void> {
     ECODE?: string;
   };
   const wh = body.webhook ?? { id: body.id, secret: body.secret };
-  if (!wh.id || !wh.secret) throw new Error(`webhook register failed: ${JSON.stringify(body).slice(0, 200)}`);
+  if (!wh.id || !wh.secret)
+    throw new Error(`webhook register failed: ${JSON.stringify(body).slice(0, 200)}`);
 
   const secretEnc = encrypt(wh.secret);
   const scope = { teamId: String(teamId) };
-  const { data: old } = await sb.from('webhooks').select().eq('connection_id', conn.id).maybeSingle();
+  const { data: old } = await sb
+    .from('webhooks')
+    .select()
+    .eq('connection_id', conn.id)
+    .maybeSingle();
   if (old) {
-    await sb.from('webhooks').update({ provider_webhook_id: wh.id, secret: secretEnc, scope }).eq('id', old.id);
+    await sb
+      .from('webhooks')
+      .update({ provider_webhook_id: wh.id, secret: secretEnc, scope })
+      .eq('id', old.id);
   } else {
-    await sb.from('webhooks').insert({ connection_id: conn.id, provider: 'clickup', provider_webhook_id: wh.id, secret: secretEnc, scope });
+    await sb.from('webhooks').insert({
+      connection_id: conn.id,
+      provider: 'clickup',
+      provider_webhook_id: wh.id,
+      secret: secretEnc,
+      scope,
+    });
   }
   console.log(`  webhook ${wh.id} → ${endpoint}`);
+}
+
+/**
+ * Re-register the Wrike webhook at the fresh tunnel URL. The signing secret is
+ * deterministic (derived from ENCRYPTION_KEY) — identical to what the adapter
+ * uses in registerWebhook/handleHandshake — so the Secure-Webhook handshake the
+ * live server performs during this POST succeeds without any DB state. Stale
+ * webhooks (pointing at the previous, now-dead tunnel) are deleted first.
+ */
+async function reRegisterWrikeWebhook(newUrl: string): Promise<void> {
+  const sb = getSupabase();
+  const { data: conn } = await sb
+    .from('provider_connections')
+    .select()
+    .eq('provider', 'wrike')
+    .maybeSingle();
+  if (!conn) {
+    console.log('  no wrike connection — skipping');
+    return;
+  }
+  const token = decryptJson<Record<string, string>>(conn.credentials).token;
+  if (!token) throw new Error('wrike connection has no token');
+  const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  const BASE_W = 'https://www.wrike.com/api/v4';
+
+  const existing = (await (await fetch(`${BASE_W}/webhooks`, { headers: h })).json()) as {
+    data?: Array<{ id: string }>;
+  };
+  for (const w of existing.data ?? []) {
+    await fetch(`${BASE_W}/webhooks/${w.id}`, { method: 'DELETE', headers: h });
+  }
+
+  const secret = hmacSha256(process.env.ENCRYPTION_KEY ?? '', 'wrike-webhook-signing').toString(
+    'hex',
+  );
+  const hookUrl = `${newUrl.replace(/\/+$/, '')}/webhooks/wrike`;
+  const res = await fetch(`${BASE_W}/webhooks`, {
+    method: 'POST',
+    headers: h,
+    body: JSON.stringify({ hookUrl, secret }),
+  });
+  const body = (await res.json()) as { data?: Array<{ id?: string }>; errorDescription?: string };
+  const id = body.data?.[0]?.id;
+  if (!id) throw new Error(`wrike webhook register failed: ${JSON.stringify(body).slice(0, 200)}`);
+
+  const secretEnc = encrypt(secret);
+  const scope = { level: 'Account' };
+  const { data: old } = await sb
+    .from('webhooks')
+    .select()
+    .eq('connection_id', conn.id)
+    .maybeSingle();
+  if (old) {
+    await sb
+      .from('webhooks')
+      .update({ provider_webhook_id: id, secret: secretEnc, scope })
+      .eq('id', old.id);
+  } else {
+    await sb.from('webhooks').insert({
+      connection_id: conn.id,
+      provider: 'wrike',
+      provider_webhook_id: id,
+      secret: secretEnc,
+      scope,
+    });
+  }
+  console.log(`  wrike webhook ${id} → ${hookUrl}`);
 }
 
 async function main(): Promise<void> {
@@ -160,9 +253,16 @@ async function main(): Promise<void> {
   console.log('re-registering ClickUp webhook…');
   await reRegisterClickUpWebhook(url);
 
+  console.log('re-registering Wrike webhook…');
+  await reRegisterWrikeWebhook(url);
+
+  // The running server caches APP_URL at boot; nudge tsx watch so a later
+  // `/connect` computes webhook URLs against the fresh value.
+  await sh('touch src/server.ts');
+
   console.log(`  /health → ${(await (await fetch(`${url}/health`)).text()).slice(0, 60)}`);
   console.log('\n✅ Done. cloudflared runs detached (stop: pkill -f cloudflared).');
-  console.log('   No app restart needed — delivery does not depend on APP_URL.');
+  console.log('   Webhook delivery is incoming — it does not depend on APP_URL.');
 }
 
 main().catch((err) => {

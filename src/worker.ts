@@ -11,7 +11,12 @@ async function start(): Promise<void> {
   healthService.register({
     name: 'queue',
     check: async () => {
-      const pong = await withTimeout(getRedis().ping().catch(() => null), 1500);
+      const pong = await withTimeout(
+        getRedis()
+          .ping()
+          .catch(() => null),
+        1500,
+      );
       return pong === 'PONG';
     },
   });

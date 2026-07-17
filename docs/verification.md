@@ -3,20 +3,20 @@
 This document is the runbook for verifying the Phase 1 notification wedge
 end-to-end. Some steps require live provider credentials and a reachable
 Telegram bot and cannot run in CI without them; those are marked **[live]**.
-Everything else is covered by the automated test suite (`npm test`) or was
+Everything else is covered by the automated test suite (`pnpm test`) or was
 verified during implementation.
 
-## Automated coverage (runs in `npm test`)
+## Automated coverage (runs in `pnpm test`)
 
-| Area | Test file | What it asserts |
-| --- | --- | --- |
-| AES-256-GCM | `src/crypto/aes.test.ts` | round-trip, fresh IV, tamper rejection |
-| HMAC (signatures) | `src/crypto/hmac.test.ts` | verify over raw bytes, constant-time |
-| Adapter contract | `src/adapters/conformance.test.ts` | registry, signature verify, capabilities-driven enrich, status-by-category |
-| ClickUp adapter | `src/adapters/clickup/clickup.test.ts` | event map, single-event parse, dedupeKey (`event:history_id`, sha256 fallback), status categories, `X-Signature` verify |
-| Wrike adapter | `src/adapters/wrike/wrike.test.ts` | batched parse, dedupeKey (+status ids, sha256 fallback), group→category, handshake echo, `X-Hook-Secret` verify |
-| Worker fan-out | `src/queue/worker.test.ts` | event-type filter, container filter, **idempotent skip on duplicate**, deliver+record |
-| Notifier templates | `src/notifier/templates.test.ts` | HTML escape, provider badge, per-event templates |
+| Area               | Test file                              | What it asserts                                                                                                         |
+| ------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| AES-256-GCM        | `src/crypto/aes.test.ts`               | round-trip, fresh IV, tamper rejection                                                                                  |
+| HMAC (signatures)  | `src/crypto/hmac.test.ts`              | verify over raw bytes, constant-time                                                                                    |
+| Adapter contract   | `src/adapters/conformance.test.ts`     | registry, signature verify, capabilities-driven enrich, status-by-category                                              |
+| ClickUp adapter    | `src/adapters/clickup/clickup.test.ts` | event map, single-event parse, dedupeKey (`event:history_id`, sha256 fallback), status categories, `X-Signature` verify |
+| Wrike adapter      | `src/adapters/wrike/wrike.test.ts`     | batched parse, dedupeKey (+status ids, sha256 fallback), group→category, handshake echo, `X-Hook-Secret` verify         |
+| Worker fan-out     | `src/queue/worker.test.ts`             | event-type filter, container filter, **idempotent skip on duplicate**, deliver+record                                   |
+| Notifier templates | `src/notifier/templates.test.ts`       | HTML escape, provider badge, per-event templates                                                                        |
 
 Schema idempotency constraints (`unique(subscription_id, dedupe_key)`,
 `unique(connection_id, telegram_chat_id)`) were verified against a real

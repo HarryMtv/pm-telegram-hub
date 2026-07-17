@@ -1,9 +1,9 @@
 import type { Bot } from 'grammy';
 import { InlineKeyboard } from 'grammy';
 
-import { registry } from '../adapters/index.js';
 import { withConnection } from '../adapters/context.js';
 import { findStatusByCategory } from '../adapters/contract-helpers.js';
+import { registry } from '../adapters/index.js';
 import type { ProviderAdapter } from '../adapters/provider-adapter.js';
 import { rateLimiters } from '../adapters/rate-limiter.js';
 import type { ProviderCredentials, StatusCategory } from '../adapters/types.js';
@@ -12,17 +12,22 @@ import { decryptJson } from '../crypto/index.js';
 import type { ProviderConnectionRow } from '../db/client.js';
 import { getConnectionById, listConnectionsForUser } from '../db/connections.js';
 import { getDefaultMapping, listMappingsForUser, upsertMapping } from '../db/mappings.js';
-import { deleteSubscription, listSubscriptionsForChat, upsertSubscription } from '../db/subscriptions.js';
+import {
+  deleteSubscription,
+  listSubscriptionsForChat,
+  upsertSubscription,
+} from '../db/subscriptions.js';
 import { upsertUserByTelegram } from '../db/users.js';
 import { logger } from '../logger.js';
 import type { StatusDef } from '../models/unified.js';
 import { escapeHtml, providerLabel, renderTaskCard } from '../notifier/templates.js';
 import { connectProvider } from '../services/connection-service.js';
-
 import { actionKeyboard, decodeCallback, decodeReply } from './callbacks.js';
 
 /** Create/refresh the users row from the Telegram identity; returns the user id. */
-async function ensureUser(ctx: { from?: { id: number; username?: string; first_name?: string; last_name?: string } }): Promise<string> {
+async function ensureUser(ctx: {
+  from?: { id: number; username?: string; first_name?: string; last_name?: string };
+}): Promise<string> {
   const from = ctx.from;
   if (!from) throw new Error('update has no user');
   const user = await upsertUserByTelegram({
@@ -57,7 +62,12 @@ async function runWithConn<R>(
 ): Promise<R> {
   const adapter = registry.get(conn.provider);
   const creds = decryptJson<ProviderCredentials>(conn.credentials);
-  const connection = { id: conn.id, provider: conn.provider, scopeId: conn.scope_id, credentials: creds };
+  const connection = {
+    id: conn.id,
+    provider: conn.provider,
+    scopeId: conn.scope_id,
+    credentials: creds,
+  };
   const limiter = rateLimiters.forConnection(conn.id, adapter.rateLimit(connection));
   return withConnection({ connection, limiter }, () => fn(adapter, creds));
 }
@@ -125,7 +135,9 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      await runWithConn(conn, (a, c) => a.addComment(c, pending.taskId, text, { mentions: [pending.actorId] }));
+      await runWithConn(conn, (a, c) =>
+        a.addComment(c, pending.taskId, text, { mentions: [pending.actorId] }),
+      );
       await ctx.reply('✅ Reply posted with a mention of the author.');
     } catch (err) {
       await ctx.reply(`❌ ${(err as Error).message}`);
@@ -171,7 +183,9 @@ export function registerCommands(bot: Bot): void {
     const adapter = registry.get(provider);
     const fields = adapter.credentialFields();
     if (fields.length !== 1 || fields[0]?.type !== 'token') {
-      await ctx.reply(`${providerLabel(provider)} needs multiple fields — connect via the Mini App.`);
+      await ctx.reply(
+        `${providerLabel(provider)} needs multiple fields — connect via the Mini App.`,
+      );
       return;
     }
 
@@ -180,7 +194,9 @@ export function registerCommands(bot: Bot): void {
       const result = await connectProvider(userId, provider, { token });
       await ctx.reply(
         `✅ Connected ${providerLabel(provider)}.` +
-          (result.webhookRegistered ? ' Webhook registered.' : ' Webhook is configured separately.'),
+          (result.webhookRegistered
+            ? ' Webhook registered.'
+            : ' Webhook is configured separately.'),
       );
     } catch (err) {
       logger.warn({ err: (err as Error).message, provider }, 'connect failed');
@@ -203,7 +219,9 @@ export function registerCommands(bot: Bot): void {
     const onlyMine = parts.includes('me');
     const providerArg = parts.find((p) => p !== 'me');
     const connections = (await listConnectionsForUser(userId)).filter((c) => c.is_active);
-    const target = providerArg ? connections.filter((c) => c.provider === providerArg) : connections;
+    const target = providerArg
+      ? connections.filter((c) => c.provider === providerArg)
+      : connections;
     if (target.length === 0) {
       await ctx.reply('No matching connection. Run /connect first.');
       return;
@@ -413,7 +431,10 @@ export function registerCommands(bot: Bot): void {
   bot.command('browse', async (ctx) => {
     const userId = await ensureUser(ctx);
     const providerArg = (ctx.msg.text ?? '').split(/\s+/)[1];
-    const res = await resolveConnection(userId, providerArg && registry.has(providerArg) ? providerArg : undefined);
+    const res = await resolveConnection(
+      userId,
+      providerArg && registry.has(providerArg) ? providerArg : undefined,
+    );
     if ('error' in res) {
       await ctx.reply(res.error);
       return;
@@ -422,7 +443,10 @@ export function registerCommands(bot: Bot): void {
       const containers = await runWithConn(res.conn, (a, c) => a.listContainers(c));
       const text = containers
         .slice(0, 50)
-        .map((c) => `${c.canContainTasks ? '📋' : '📁'} ${escapeHtml(c.name)} — <code>${escapeHtml(c.id)}</code>`)
+        .map(
+          (c) =>
+            `${c.canContainTasks ? '📋' : '📁'} ${escapeHtml(c.name)} — <code>${escapeHtml(c.id)}</code>`,
+        )
         .join('\n');
       await ctx.reply(text || 'No containers found', { parse_mode: 'HTML' });
     } catch (err) {
@@ -490,7 +514,12 @@ export function registerCommands(bot: Bot): void {
     }
     const adapter = registry.get(target.provider);
     const creds = decryptJson<Record<string, string>>(conn.credentials);
-    const connection = { id: conn.id, provider: conn.provider, scopeId: conn.scope_id, credentials: creds };
+    const connection = {
+      id: conn.id,
+      provider: conn.provider,
+      scopeId: conn.scope_id,
+      credentials: creds,
+    };
     const limiter = rateLimiters.forConnection(conn.id, adapter.rateLimit(connection));
 
     if (target.action === 'done' || target.action === 'take') {
@@ -504,8 +533,12 @@ export function registerCommands(bot: Bot): void {
           await ctx.answerCallbackQuery({ text: 'Status unavailable' });
           return;
         }
-        await withConnection({ connection, limiter }, () => adapter.setStatus(creds, target.taskId, status.id));
-        await ctx.answerCallbackQuery({ text: target.action === 'done' ? '✅ Done' : '💪 In progress' });
+        await withConnection({ connection, limiter }, () =>
+          adapter.setStatus(creds, target.taskId, status.id),
+        );
+        await ctx.answerCallbackQuery({
+          text: target.action === 'done' ? '✅ Done' : '💪 In progress',
+        });
       } catch (err) {
         await ctx.answerCallbackQuery({ text: `Error: ${(err as Error).message}` });
       }

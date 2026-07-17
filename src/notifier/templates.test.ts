@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import type { UnifiedEvent } from '../models/unified.js';
-
 import { escapeHtml, providerLabel, renderEvent } from './templates.js';
 
 describe('escapeHtml / providerLabel', () => {
@@ -58,7 +57,7 @@ describe('renderEvent', () => {
       actor: 'alice',
       details: { assignee: 'bob' },
     });
-    expect(text).toContain('→ bob');
+    expect(text).toContain('assigned to bob');
     expect(text).toContain('by alice');
   });
 });

@@ -1,7 +1,5 @@
-import { randomBytes } from 'node:crypto';
-
 import { config } from '../../config/index.js';
-import { verifyHexHmac } from '../../crypto/index.js';
+import { hmacSha256, verifyHexHmac } from '../../crypto/index.js';
 import type { Container, StatusDef, UnifiedEvent, UnifiedTask } from '../../models/unified.js';
 import { currentConnection } from '../context.js';
 import { providerFetch } from '../http.js';
@@ -51,19 +49,34 @@ export class WrikeAdapter implements ProviderAdapter {
   // ── Webhooks ───────────────────────────────────────────────────────────────
 
   /**
-   * Wrike sends an empty-body verification request (with X-Hook-Secret) at
-   * registration; we echo the header. Non-empty body → notification (return null).
+   * Wrike Secure Webhook handshake (developers.wrike.com/docs/webhooks, confirmed
+   * against the live API). The verification POST carries:
+   *   X-Hook-Secret:   a random challenge Wrike generates (NOT our secret).
+   *   X-Hook-Signature: hmacSha256(secret, request body).
+   *   body: {"requestType": "WebHook secret verification"}.
+   * We must verify X-Hook-Signature, then respond 200 with
+   *   X-Hook-Secret: hmacSha256(secret, challenge)
+   * — NOT the raw challenge. The signing secret is deterministic (derived from
+   * ENCRYPTION_KEY) so it is known here without a DB lookup: the webhook row is not
+   * persisted until after registration succeeds, so the handshake cannot resolve it.
    */
   handleHandshake(headers: WebhookHeaders, rawBody?: Buffer): HandshakeResponse | null {
-    if (rawBody && rawBody.length > 0) return null;
-    const secret = getHeader(headers, 'x-hook-secret');
-    if (!secret) return null;
-    return { status: 200, headers: { 'X-Hook-Secret': secret } };
+    const body = rawBody ?? Buffer.from('');
+    if (!body.toString('utf8').includes('WebHook secret verification')) return null;
+    const secret = this.webhookSecret();
+    const signature = getHeader(headers, 'x-hook-signature');
+    if (!signature || !verifyHexHmac(secret, body, signature)) return null; // discard — not from Wrike
+    const challenge = getHeader(headers, 'x-hook-secret');
+    if (!challenge) return null;
+    return {
+      status: 200,
+      headers: { 'X-Hook-Secret': hmacSha256(secret, challenge).toString('hex') },
+    };
   }
 
-  /** Notification signature: X-Hook-Secret = HMAC-SHA256(body, our secret). */
+  /** Notification signature: X-Hook-Signature = HMAC-SHA256(secret, body) over raw bytes. */
   verifyWebhook(rawBody: Buffer, headers: WebhookHeaders, secret: string): boolean {
-    const signature = getHeader(headers, 'x-hook-secret');
+    const signature = getHeader(headers, 'x-hook-signature');
     if (!signature) return false;
     return verifyHexHmac(secret, rawBody, signature);
   }
@@ -81,33 +94,61 @@ export class WrikeAdapter implements ProviderAdapter {
   async enrichEvent(event: UnifiedEvent, creds: ProviderCredentials): Promise<UnifiedEvent> {
     const task = await this.getRawTask(creds, event.taskId);
     const statusMap = await this.getStatusMap(creds);
-    const fromEvent = typeof event.details.customStatusId === 'string'
-      ? statusMap.get(event.details.customStatusId)
-      : undefined;
-    const status = fromEvent ?? (task.customStatusId ? statusMap.get(task.customStatusId) : undefined);
+    const fromEvent =
+      typeof event.details.customStatusId === 'string'
+        ? statusMap.get(event.details.customStatusId)
+        : undefined;
+    const status =
+      fromEvent ?? (task.customStatusId ? statusMap.get(task.customStatusId) : undefined);
+
+    // Wrike webhooks carry only user ids; resolve them to display names once so
+    // notifications read "by Igor" rather than "by KUAY…". Covers the event author
+    // (actor) and the assignees. Best-effort — never blocks a notification.
+    const ids = new Set<string>();
+    if (event.actorId) ids.add(event.actorId);
+    for (const id of task.responsibleIds ?? []) ids.add(id);
+    for (const id of (event.details.newResponsibles as string[] | undefined) ?? []) ids.add(id);
+    const names = ids.size
+      ? await this.getContactNames(creds, [...ids])
+      : new Map<string, string>();
+    const name = (id?: string): string | undefined => (id ? (names.get(id) ?? id) : undefined);
+
     return {
       ...event,
       taskName: task.title,
       taskUrl: task.permalink,
       containerId: task.parentIds?.[0] ? String(task.parentIds[0]) : event.containerId,
+      actor: name(event.actorId) ?? event.actor,
       details: {
         ...event.details,
         status: status?.name,
-        assignees: task.responsibleIds ?? event.details.newResponsibles ?? [],
+        // assigneeIds is the canonical key the core's "assigned to me" filter reads
+        // (worker.matchesFilters); assignees/newResponsibles are display names.
+        assigneeIds: task.responsibleIds ?? [],
+        assignees: (task.responsibleIds ?? []).map((id) => name(id) ?? id),
+        newResponsibles: ((event.details.newResponsibles as string[] | undefined) ?? []).map(
+          (id) => name(id) ?? id,
+        ),
       },
     };
   }
 
   async registerWebhook(creds: ProviderCredentials, scope: WebhookScope): Promise<WebhookRef> {
-    // We generate the secret (spec §4.2); account-level scope for Phase 1.
-    const secret = randomBytes(32).toString('hex');
+    // Deterministic secret (derived from ENCRYPTION_KEY) so handleHandshake can
+    // recompute it during the registration verification request, before the webhook
+    // row is persisted. Account-level scope for Phase 1.
+    const secret = this.webhookSecret();
     const res = await this.call(creds, 'POST', '/webhooks', {
       body: JSON.stringify({ hookUrl: config.webhookUrlFor(this.id), secret }),
     });
     const arr = (res.data as { data?: Array<{ id?: string }> }).data ?? [];
     const id = arr[0]?.id;
     if (!id) throw new Error('Wrike registerWebhook: missing id in response');
-    return { providerWebhookId: id, secret, scope: { level: scope.level, workspaceId: scope.workspaceId } };
+    return {
+      providerWebhookId: id,
+      secret,
+      scope: { level: scope.level, workspaceId: scope.workspaceId },
+    };
   }
 
   async deleteWebhook(creds: ProviderCredentials, providerWebhookId: string): Promise<void> {
@@ -118,10 +159,22 @@ export class WrikeAdapter implements ProviderAdapter {
 
   async verifyCredentials(creds: ProviderCredentials): Promise<AccountInfo> {
     const res = await this.call(creds, 'GET', '/contacts', { searchParams: { me: 'true' } });
-    const me = (res.data as { data?: Array<{ id?: string; firstName?: string; lastName?: string; accountId?: string }> }).data?.[0];
-    if (!me?.accountId) throw new Error('Wrike: invalid token (GET /contacts?me=true)');
+    const me = (
+      res.data as {
+        data?: Array<{
+          id?: string;
+          firstName?: string;
+          lastName?: string;
+          profiles?: Array<{ accountId?: string }>;
+        }>;
+      }
+    ).data?.[0];
+    // Wrike nests accountId under profiles[] (a contact may belong to several accounts),
+    // not at the top level of the contact — confirmed against the live API.
+    const accountId = me?.profiles?.find((p) => p.accountId)?.accountId;
+    if (!me?.id || !accountId) throw new Error('Wrike: invalid token (GET /contacts?me=true)');
     return {
-      scopeId: me.accountId,
+      scopeId: accountId,
       externalId: me.id,
       displayName: [me.firstName, me.lastName].filter(Boolean).join(' ') || undefined,
     };
@@ -132,7 +185,9 @@ export class WrikeAdapter implements ProviderAdapter {
     if (input.description) params.description = input.description;
     if (input.dueDate) params.dates = JSON.stringify({ due: input.dueDate });
     if (input.assignees?.length) params.responsiblesAdd = JSON.stringify(input.assignees);
-    const res = await this.call(creds, 'POST', `/folders/${input.containerId}/tasks`, { searchParams: params });
+    const res = await this.call(creds, 'POST', `/folders/${input.containerId}/tasks`, {
+      searchParams: params,
+    });
     const task = (res.data as { data?: WrikeTask[] }).data?.[0];
     if (!task) throw new Error('Wrike createTask: no task returned');
     return { id: task.id, url: task.permalink ?? `https://www.wrike.com/` };
@@ -146,7 +201,8 @@ export class WrikeAdapter implements ProviderAdapter {
       params.dates = patch.dueDate === null ? '{}' : JSON.stringify({ due: patch.dueDate });
     }
     if (patch.addAssignees?.length) params.responsiblesAdd = JSON.stringify(patch.addAssignees);
-    if (patch.removeAssignees?.length) params.responsiblesRemove = JSON.stringify(patch.removeAssignees);
+    if (patch.removeAssignees?.length)
+      params.responsiblesRemove = JSON.stringify(patch.removeAssignees);
     await this.call(creds, 'PUT', `/tasks/${taskId}`, { searchParams: params });
   }
 
@@ -167,7 +223,11 @@ export class WrikeAdapter implements ProviderAdapter {
       id: task.id,
       name: task.title ?? task.id,
       description: task.description,
-      status: status ?? { id: task.customStatusId ?? '', name: task.status ?? '', category: 'open' },
+      status: status ?? {
+        id: task.customStatusId ?? '',
+        name: task.status ?? '',
+        category: 'open',
+      },
       assignees: task.responsibleIds ?? [],
       dueDate: task.dates?.due,
       url: task.permalink ?? '',
@@ -182,11 +242,19 @@ export class WrikeAdapter implements ProviderAdapter {
     if (!accountId) return [];
 
     const spaces = await this.getSpaces(creds);
-    const containers: Container[] = [{ id: accountId, name: 'Account', kind: 'root', canContainTasks: false }];
+    const containers: Container[] = [
+      { id: accountId, name: 'Account', kind: 'root', canContainTasks: false },
+    ];
 
     for (const space of spaces) {
       const spaceId = String(space.id ?? '');
-      containers.push({ id: spaceId, name: space.title ?? spaceId, kind: 'space', canContainTasks: false, parentId: accountId });
+      containers.push({
+        id: spaceId,
+        name: space.title ?? spaceId,
+        kind: 'space',
+        canContainTasks: false,
+        parentId: accountId,
+      });
       const folders = await this.getFolders(creds, spaceId);
 
       // folder.parentIds already encodes nesting; every folder can contain tasks.
@@ -215,7 +283,7 @@ export class WrikeAdapter implements ProviderAdapter {
     const owning = workflows.find((w) =>
       (w.customStatuses ?? []).some((s) => s.id === task.customStatusId),
     );
-    const statuses = (owning?.customStatuses ?? workflows.flatMap((w) => w.customStatuses ?? []));
+    const statuses = owning?.customStatuses ?? workflows.flatMap((w) => w.customStatuses ?? []);
     return statuses.map(mapWrikeCustomStatus).filter((s): s is StatusDef => s !== null);
   }
 
@@ -229,6 +297,40 @@ export class WrikeAdapter implements ProviderAdapter {
 
   private authHeaders(creds: ProviderCredentials): Record<string, string> {
     return { Authorization: `Bearer ${creds.token ?? ''}`, 'Content-Type': 'application/json' };
+  }
+
+  /**
+   * Deterministic webhook signing secret, derived from ENCRYPTION_KEY. Stable across
+   * process restarts and identical in registerWebhook (sent to Wrike, stored) and
+   * handleHandshake (recomputed during the verification request). App-scoped to Wrike;
+   * equivalent in trust to the per-webhook random it replaces, since the signing secret
+   * is never disclosed and ENCRYPTION_KEY is already the root secret.
+   */
+  private webhookSecret(): string {
+    return hmacSha256(config.encryptionKeyHex, 'wrike-webhook-signing').toString('hex');
+  }
+
+  /**
+   * Resolve Wrike contact ids → "First Last" display names (GET /contacts/{id},{id},…
+   * up to 100 ids per call). Webhook payloads carry only ids; this is best-effort —
+   * any failure returns an empty map so enrichment degrades to ids, never blocking a
+   * notification.
+   */
+  private async getContactNames(creds: ProviderCredentials, ids: string[]): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (!ids.length) return map;
+    try {
+      const res = await this.call(creds, 'GET', `/contacts/${ids.join(',')}`);
+      const contacts = (res.data as { data?: Array<{ id?: string; firstName?: string; lastName?: string }> }).data ?? [];
+      for (const c of contacts) {
+        if (!c.id) continue;
+        const display = [c.firstName, c.lastName].filter(Boolean).join(' ') || c.id;
+        map.set(c.id, display);
+      }
+    } catch {
+      // degrade to ids
+    }
+    return map;
   }
 
   private call(
@@ -277,6 +379,9 @@ export class WrikeAdapter implements ProviderAdapter {
 
   private async getFolders(creds: ProviderCredentials, spaceId: string) {
     const res = await this.call(creds, 'GET', `/spaces/${spaceId}/folders`);
-    return (res.data as { data?: Array<{ id?: string; title?: string; childIds?: string[] }> }).data ?? [];
+    return (
+      (res.data as { data?: Array<{ id?: string; title?: string; childIds?: string[] }> }).data ??
+      []
+    );
   }
 }

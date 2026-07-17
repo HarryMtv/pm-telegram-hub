@@ -25,7 +25,11 @@ export function decodeCallback(data: string): CallbackTarget | null {
 }
 
 /** Build the action keyboard shown under a notification / task card. */
-export function actionKeyboard(provider: string, taskId: string, connectionId: string): InlineKeyboard {
+export function actionKeyboard(
+  provider: string,
+  taskId: string,
+  connectionId: string,
+): InlineKeyboard {
   const base = { provider, connectionId, taskId };
   return new InlineKeyboard()
     .text('💪 Take', encodeCallback({ ...base, action: 'take' }))
@@ -65,7 +69,10 @@ export function commentKeyboard(
   authorId?: string,
 ): InlineKeyboard {
   const base = { provider, connectionId, taskId };
-  const kb = new InlineKeyboard().text('💬 Comment', encodeCallback({ ...base, action: 'comment' }));
+  const kb = new InlineKeyboard().text(
+    '💬 Comment',
+    encodeCallback({ ...base, action: 'comment' }),
+  );
   if (authorId) kb.row().text('↩️ Reply', encodeReply({ provider, taskId, actorId: authorId }));
   return kb;
 }

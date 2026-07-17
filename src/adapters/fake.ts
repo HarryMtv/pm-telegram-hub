@@ -1,6 +1,5 @@
-import type { Container, StatusDef, UnifiedEvent, UnifiedTask } from '../models/unified.js';
 import { verifyHexHmac } from '../crypto/index.js';
-
+import type { Container, StatusDef, UnifiedEvent, UnifiedTask } from '../models/unified.js';
 import type { ProviderAdapter } from './provider-adapter.js';
 import type {
   AccountInfo,
@@ -114,10 +113,17 @@ export class FakeAdapter implements ProviderAdapter {
 
   async createTask(_creds: ProviderCredentials, input: CreateTaskInput): Promise<TaskRef> {
     this.calls.create.push(input);
-    return { id: `task-${input.name.toLowerCase().replace(/\s+/g, '-')}`, url: `https://fake.test/t/new` };
+    return {
+      id: `task-${input.name.toLowerCase().replace(/\s+/g, '-')}`,
+      url: `https://fake.test/t/new`,
+    };
   }
 
-  async updateTask(_creds: ProviderCredentials, _taskId: string, _patch: TaskPatch): Promise<void> {}
+  async updateTask(
+    _creds: ProviderCredentials,
+    _taskId: string,
+    _patch: TaskPatch,
+  ): Promise<void> {}
   async setStatus(_creds: ProviderCredentials, _taskId: string, _statusId: string): Promise<void> {}
   async addComment(_creds: ProviderCredentials, _taskId: string, _text: string): Promise<void> {}
 
@@ -139,14 +145,17 @@ export class FakeAdapter implements ProviderAdapter {
   async listContainers(_creds: ProviderCredentials, _parentId?: string): Promise<Container[]> {
     return [
       { id: 'fake-workspace', name: 'Fake Workspace', kind: 'space', canContainTasks: false },
-      { id: 'fake-list', name: 'Fake List', kind: 'tasklist', canContainTasks: true, parentId: 'fake-workspace' },
+      {
+        id: 'fake-list',
+        name: 'Fake List',
+        kind: 'tasklist',
+        canContainTasks: true,
+        parentId: 'fake-workspace',
+      },
     ];
   }
 
-  async getAvailableStatuses(
-    _creds: ProviderCredentials,
-    _taskId: string,
-  ): Promise<StatusDef[]> {
+  async getAvailableStatuses(_creds: ProviderCredentials, _taskId: string): Promise<StatusDef[]> {
     return this.statuses;
   }
 

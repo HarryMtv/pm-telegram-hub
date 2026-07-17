@@ -1,20 +1,22 @@
 # ── build stage ───────────────────────────────────────────────────────────────
 FROM node:22-alpine AS build
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
+RUN corepack enable
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY tsconfig.json tsup.config.ts ./
 COPY src ./src
 COPY scripts ./scripts
 COPY migrations ./migrations
-RUN npm run build
+RUN pnpm run build
 
 # ── runtime stage (shared by app + worker) ────────────────────────────────────
 FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
-COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN corepack enable
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/migrations ./migrations
 

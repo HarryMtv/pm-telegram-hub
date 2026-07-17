@@ -84,7 +84,10 @@ export class ClickUpAdapter implements ProviderAdapter {
   async registerWebhook(creds: ProviderCredentials, scope: WebhookScope): Promise<WebhookRef> {
     const teamId = scope.workspaceId;
     const res = await this.call(creds, 'POST', `/team/${teamId}/webhook`, {
-      body: JSON.stringify({ endpoint: config.webhookUrlFor(this.id), events: CLICKUP_WEBHOOK_EVENTS }),
+      body: JSON.stringify({
+        endpoint: config.webhookUrlFor(this.id),
+        events: CLICKUP_WEBHOOK_EVENTS,
+      }),
     });
     // ClickUp wraps the created webhook in a `webhook` object: { webhook: { id, secret, ... } }.
     // On a duplicate config it returns { err, ECODE: "OAUTH_171" } (HTTP 400).
@@ -153,10 +156,17 @@ export class ClickUpAdapter implements ProviderAdapter {
   }
 
   async setStatus(creds: ProviderCredentials, taskId: string, statusId: string): Promise<void> {
-    await this.call(creds, 'PUT', `/task/${taskId}`, { body: JSON.stringify({ status: statusId }) });
+    await this.call(creds, 'PUT', `/task/${taskId}`, {
+      body: JSON.stringify({ status: statusId }),
+    });
   }
 
-  async addComment(creds: ProviderCredentials, taskId: string, text: string, opts: CommentOptions = {}): Promise<void> {
+  async addComment(
+    creds: ProviderCredentials,
+    taskId: string,
+    text: string,
+    opts: CommentOptions = {},
+  ): Promise<void> {
     // A real ClickUp @mention (that pings) requires the rich `comment` array with
     // a `tag` element per mentioned user id; plain `comment_text` only renders text.
     const mentions = (opts.mentions ?? [])
@@ -164,7 +174,10 @@ export class ClickUpAdapter implements ProviderAdapter {
       .filter((n) => Number.isInteger(n));
     const body =
       mentions.length > 0
-        ? { comment: [...mentions.map((id) => ({ type: 'tag', user: { id } })), { text }], notify_all: false }
+        ? {
+            comment: [...mentions.map((id) => ({ type: 'tag', user: { id } })), { text }],
+            notify_all: false,
+          }
         : { comment_text: text };
     await this.call(creds, 'POST', `/task/${taskId}/comment`, { body: JSON.stringify(body) });
   }
@@ -181,11 +194,19 @@ export class ClickUpAdapter implements ProviderAdapter {
     if (!teamId) return [];
 
     const spaces = await this.getSpaces(creds, teamId);
-    const containers: Container[] = [{ id: teamId, name: 'Team', kind: 'space', canContainTasks: false }];
+    const containers: Container[] = [
+      { id: teamId, name: 'Team', kind: 'space', canContainTasks: false },
+    ];
 
     for (const space of spaces) {
       const spaceId = String(space.id);
-      containers.push({ id: spaceId, name: space.name ?? spaceId, kind: 'space', canContainTasks: false, parentId: teamId });
+      containers.push({
+        id: spaceId,
+        name: space.name ?? spaceId,
+        kind: 'space',
+        canContainTasks: false,
+        parentId: teamId,
+      });
       const [folders, folderlessLists] = await Promise.all([
         this.getFolders(creds, spaceId),
         this.getLists(creds, `/space/${spaceId}/list`),
@@ -195,10 +216,18 @@ export class ClickUpAdapter implements ProviderAdapter {
       }
       for (const folder of folders) {
         const folderId = String(folder.id);
-        containers.push({ id: folderId, name: folder.name ?? folderId, kind: 'folder', canContainTasks: false, parentId: spaceId });
+        containers.push({
+          id: folderId,
+          name: folder.name ?? folderId,
+          kind: 'folder',
+          canContainTasks: false,
+          parentId: spaceId,
+        });
         const lists = await this.getLists(creds, `/folder/${folderId}/list`);
         for (const list of lists) {
-          containers.push(this.listContainer(String(list.id), list.name ?? String(list.id), folderId));
+          containers.push(
+            this.listContainer(String(list.id), list.name ?? String(list.id), folderId),
+          );
         }
       }
     }
@@ -214,7 +243,8 @@ export class ClickUpAdapter implements ProviderAdapter {
     const listId = task.list?.id;
     if (!listId) return [];
     const res = await this.call(creds, 'GET', `/list/${listId}`);
-    const statuses = (res.data as { statuses?: Array<{ status?: string; type?: string }> }).statuses ?? [];
+    const statuses =
+      (res.data as { statuses?: Array<{ status?: string; type?: string }> }).statuses ?? [];
     return statuses.map(mapClickUpStatus).filter((s): s is StatusDef => s !== null);
   }
 
@@ -236,17 +266,25 @@ export class ClickUpAdapter implements ProviderAdapter {
     path: string,
     opts: { body?: string } = {},
   ) {
-    return providerFetch(`${BASE}${path}`, { method, headers: this.authHeaders(creds), body: opts.body });
+    return providerFetch(`${BASE}${path}`, {
+      method,
+      headers: this.authHeaders(creds),
+      body: opts.body,
+    });
   }
 
-  private async getUser(creds: ProviderCredentials): Promise<{ id: string | number; username?: string }> {
+  private async getUser(
+    creds: ProviderCredentials,
+  ): Promise<{ id: string | number; username?: string }> {
     const res = await this.call(creds, 'GET', '/user');
     const user = (res.data as { user?: { id: string | number; username?: string } }).user;
     if (!user) throw new Error('ClickUp: invalid token (GET /user)');
     return user;
   }
 
-  private async getTeams(creds: ProviderCredentials): Promise<Array<{ id: string | number; name?: string }>> {
+  private async getTeams(
+    creds: ProviderCredentials,
+  ): Promise<Array<{ id: string | number; name?: string }>> {
     const res = await this.call(creds, 'GET', '/team');
     return (res.data as { teams?: Array<{ id: string | number; name?: string }> }).teams ?? [];
   }

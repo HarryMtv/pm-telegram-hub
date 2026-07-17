@@ -1,15 +1,12 @@
 import { Job, Worker } from 'bullmq';
 
-import { registerAdapters, registry } from '../adapters/index.js';
-import { shouldEnrich } from '../adapters/contract-helpers.js';
 import { withConnection } from '../adapters/context.js';
+import { shouldEnrich } from '../adapters/contract-helpers.js';
+import { registerAdapters, registry } from '../adapters/index.js';
 import { rateLimiters } from '../adapters/rate-limiter.js';
 import { decryptJson } from '../crypto/index.js';
 import { getActiveConnectionById } from '../db/connections.js';
-import {
-  setNotificationMessageId,
-  tryInsertNotification,
-} from '../db/notification-log.js';
+import { setNotificationMessageId, tryInsertNotification } from '../db/notification-log.js';
 import { listActiveSubscriptionsForConnection } from '../db/subscriptions.js';
 import { logger } from '../logger.js';
 import { inc } from '../metrics.js';
@@ -38,7 +35,11 @@ export function matchesFilters(filters: Record<string, unknown>, event: UnifiedE
 /** Swappable dependencies for the fan-out step (testable in isolation). */
 export interface FanOutDeps {
   tryInsert: (subId: string, dedupeKey: string, eventType: string) => Promise<boolean>;
-  deliver: (chatId: number, event: UnifiedEvent, opts: { showActions: boolean; connectionId: string }) => Promise<number>;
+  deliver: (
+    chatId: number,
+    event: UnifiedEvent,
+    opts: { showActions: boolean; connectionId: string },
+  ) => Promise<number>;
   record: (subId: string, dedupeKey: string, messageId: number) => Promise<void>;
 }
 
@@ -49,7 +50,13 @@ export interface FanOutDeps {
  */
 export async function fanOut(
   enriched: UnifiedEvent,
-  subscriptions: Array<{ id: string; connection_id: string; telegram_chat_id: string; event_types: string[]; filters: Record<string, unknown> }>,
+  subscriptions: Array<{
+    id: string;
+    connection_id: string;
+    telegram_chat_id: string;
+    event_types: string[];
+    filters: Record<string, unknown>;
+  }>,
   deps: FanOutDeps,
   opts: { selfActorId?: string } = {},
 ): Promise<{ delivered: number; deduped: number; selfSuppressed: number }> {
@@ -96,14 +103,22 @@ async function processJob(job: Job<WebhookJobData>): Promise<void> {
   }
 
   const creds = decryptJson<Record<string, string>>(conn.credentials);
-  const connection = { id: conn.id, provider: conn.provider, scopeId: conn.scope_id, credentials: creds };
+  const connection = {
+    id: conn.id,
+    provider: conn.provider,
+    scopeId: conn.scope_id,
+    credentials: creds,
+  };
   const limiter = rateLimiters.forConnection(connectionId, adapter.rateLimit(connection));
 
   const subscriptions = await listActiveSubscriptionsForConnection(connectionId);
   if (subscriptions.length === 0) {
     // Events ARE arriving (ClickUp delivered, signature verified) but nothing is
     // subscribed — without this log the drop is completely silent.
-    logger.info({ connectionId, provider }, 'webhook processed, no active subscriptions — run /subscribe');
+    logger.info(
+      { connectionId, provider },
+      'webhook processed, no active subscriptions — run /subscribe',
+    );
     return;
   }
 

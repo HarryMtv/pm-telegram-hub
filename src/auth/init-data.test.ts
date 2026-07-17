@@ -2,7 +2,6 @@ import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 
 import { config } from '../config/index.js';
-
 import { signTelegramJwt, validateInitData } from './init-data.js';
 
 const BOT_TOKEN = config.telegram.botToken;
@@ -28,7 +27,11 @@ describe('initData validation', () => {
   const now = Math.floor(Date.now() / 1000);
 
   it('accepts a correctly signed, fresh initData', () => {
-    const initData = buildInitData(BOT_TOKEN, { id: 12345, username: 'igor', first_name: 'Igor' }, now);
+    const initData = buildInitData(
+      BOT_TOKEN,
+      { id: 12345, username: 'igor', first_name: 'Igor' },
+      now,
+    );
     const result = validateInitData(initData, BOT_TOKEN);
     expect(result?.user.id).toBe(12345);
     expect(result?.user.username).toBe('igor');

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { UnifiedEvent } from '../models/unified.js';
-
 import { DigestBatcher } from './digest.js';
 
 const event = (taskId: string): UnifiedEvent => ({

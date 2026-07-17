@@ -58,8 +58,10 @@ export async function register(app: FastifyInstance): Promise<void> {
   app.post('/api/connect', async (req, reply) => {
     const userId = await requireUserId(req, reply);
     if (!userId) return;
-    const { provider, credentials } = (req.body as { provider?: string; credentials?: Record<string, string> }) ?? {};
-    if (!provider || !credentials) return reply.code(400).send({ error: 'provider and credentials required' });
+    const { provider, credentials } =
+      (req.body as { provider?: string; credentials?: Record<string, string> }) ?? {};
+    if (!provider || !credentials)
+      return reply.code(400).send({ error: 'provider and credentials required' });
     try {
       const result = await connectProvider(userId, provider, credentials);
       return reply.send(result);
@@ -72,16 +74,23 @@ export async function register(app: FastifyInstance): Promise<void> {
   app.post('/api/subscriptions', async (req, reply) => {
     const userId = await requireUserId(req, reply);
     if (!userId) return;
-    const { connectionId, telegramChatId, eventTypes, filters } = (req.body as {
-      connectionId?: string;
-      telegramChatId?: number;
-      eventTypes?: string[];
-      filters?: Record<string, unknown>;
-    }) ?? {};
+    const { connectionId, telegramChatId, eventTypes, filters } =
+      (req.body as {
+        connectionId?: string;
+        telegramChatId?: number;
+        eventTypes?: string[];
+        filters?: Record<string, unknown>;
+      }) ?? {};
     if (!connectionId || !telegramChatId) {
       return reply.code(400).send({ error: 'connectionId and telegramChatId required' });
     }
-    const sub = await upsertSubscription({ userId, connectionId, telegramChatId, eventTypes, filters });
+    const sub = await upsertSubscription({
+      userId,
+      connectionId,
+      telegramChatId,
+      eventTypes,
+      filters,
+    });
     return reply.send({ subscription: { id: sub.id, isActive: sub.is_active } });
   });
 }

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { hmacSha256 } from '../../crypto/index.js';
-
 import { ClickUpAdapter } from './index.js';
 import {
   mapClickUpEvent,
@@ -31,7 +30,12 @@ describe('ClickUp parseEvents', () => {
     event: 'taskStatusUpdated',
     task_id: 'abc',
     history_items: [
-      { id: 'h1', before: { status: 'Open' }, after: { status: 'Done' }, user: { id: 'u1', username: 'igor' } },
+      {
+        id: 'h1',
+        before: { status: 'Open' },
+        after: { status: 'Done' },
+        user: { id: 'u1', username: 'igor' },
+      },
     ],
   };
 
@@ -55,7 +59,11 @@ describe('ClickUp parseEvents', () => {
   });
 
   it('uses a sha256 fallback dedupeKey when no history id is present', () => {
-    const event = parseClickUpEvents({ event: 'taskCreated', task_id: 't', history_items: [{}] })[0]!;
+    const event = parseClickUpEvents({
+      event: 'taskCreated',
+      task_id: 't',
+      history_items: [{}],
+    })[0]!;
     expect(event.dedupeKey).toMatch(/^sha256:/);
   });
 
@@ -82,7 +90,10 @@ describe('ClickUp parseEvents', () => {
     const events = parseClickUpEvents({
       event: 'taskUpdated',
       task_id: 't',
-      history_items: [{ id: 'h1', field: 'status' }, { id: 'h2', field: 'name' }],
+      history_items: [
+        { id: 'h1', field: 'status' },
+        { id: 'h2', field: 'name' },
+      ],
     });
     expect(events).toHaveLength(1);
     expect(events[0]?.details.field).toBe('name');
@@ -117,7 +128,9 @@ describe('ClickUp parseEvents', () => {
 describe('ClickUp status mapping', () => {
   it('maps ClickUp status types to unified categories', () => {
     expect(mapClickUpStatus({ status: 'Open', type: 'todo' })?.category).toBe('open');
-    expect(mapClickUpStatus({ status: 'In Progress', type: 'in progress' })?.category).toBe('in_progress');
+    expect(mapClickUpStatus({ status: 'In Progress', type: 'in progress' })?.category).toBe(
+      'in_progress',
+    );
     expect(mapClickUpStatus({ status: 'Done', type: 'closed' })?.category).toBe('done');
     expect(mapClickUpStatus({ status: 'Cancelled', type: 'closed' })?.category).toBe('cancelled');
   });
@@ -137,7 +150,9 @@ describe('ClickUp adapter contract', () => {
   it('verifies X-Signature HMAC over the raw body', () => {
     const body = Buffer.from('{"event":"taskStatusUpdated"}');
     const signature = hmacSha256('per-webhook-secret', body).toString('hex');
-    expect(adapter.verifyWebhook(body, { 'x-signature': signature }, 'per-webhook-secret')).toBe(true);
+    expect(adapter.verifyWebhook(body, { 'x-signature': signature }, 'per-webhook-secret')).toBe(
+      true,
+    );
     expect(adapter.verifyWebhook(body, { 'x-signature': signature }, 'wrong-secret')).toBe(false);
     expect(adapter.verifyWebhook(body, {}, 'per-webhook-secret')).toBe(false);
   });

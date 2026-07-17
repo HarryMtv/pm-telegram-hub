@@ -45,7 +45,8 @@ export async function register(app: FastifyInstance): Promise<void> {
       const handshake = adapter.handleHandshake(headers, rawBody);
       if (handshake) {
         const response = reply.code(handshake.status ?? 200);
-        for (const [key, value] of Object.entries(handshake.headers ?? {})) response.header(key, value);
+        for (const [key, value] of Object.entries(handshake.headers ?? {}))
+          response.header(key, value);
         return response.send(handshake.body ?? '');
       }
     }

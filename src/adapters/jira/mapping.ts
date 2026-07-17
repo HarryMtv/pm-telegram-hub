@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 
-import type { StatusCategory, StatusDef, UnifiedEvent, UnifiedEventType } from '../../models/unified.js';
+import type {
+  StatusCategory,
+  StatusDef,
+  UnifiedEvent,
+  UnifiedEventType,
+} from '../../models/unified.js';
 import { getHeader, type WebhookHeaders } from '../types.js';
 
 export interface JiraWebhookPayload {
@@ -59,7 +64,9 @@ export function parseJiraEvents(
   const summary = issue?.fields?.summary;
   const deliveryId = getHeader(headers, 'x-atlassian-webhook-identifier') ?? '';
   const dedupe = (suffix: string): string =>
-    deliveryId ? `${deliveryId}:${suffix}` : `sha256:${sha256(JSON.stringify({ event, taskId, suffix }))}`;
+    deliveryId
+      ? `${deliveryId}:${suffix}`
+      : `sha256:${sha256(JSON.stringify({ event, taskId, suffix }))}`;
 
   const base = { provider, taskId, taskName: summary, actor, containerId, raw: payload };
 

@@ -7,7 +7,10 @@ const buttons = (kb: { inline_keyboard: Btn[][] }): Btn[] => kb.inline_keyboard.
 
 describe('keyboardFor', () => {
   it('gives status events Take/Done/Comment buttons', () => {
-    const kb = keyboardFor({ eventType: 'task.status_changed', provider: 'clickup', taskId: 't1' }, 'c1');
+    const kb = keyboardFor(
+      { eventType: 'task.status_changed', provider: 'clickup', taskId: 't1' },
+      'c1',
+    );
     const datas = buttons(kb)
       .map((b) => b.callback_data)
       .filter((d): d is string => typeof d === 'string');
@@ -18,7 +21,13 @@ describe('keyboardFor', () => {
 
   it('gives comment events Comment + Reply(callback), no Take/Done', () => {
     const kb = keyboardFor(
-      { eventType: 'comment.added', provider: 'clickup', taskId: 't1', actor: 'Onboarding Assistant', actorId: '302663612' },
+      {
+        eventType: 'comment.added',
+        provider: 'clickup',
+        taskId: 't1',
+        actor: 'Onboarding Assistant',
+        actorId: '302663612',
+      },
       'c1',
     );
     const datas = buttons(kb)
@@ -31,7 +40,12 @@ describe('keyboardFor', () => {
 
   it('omits the Reply button when there is no author id', () => {
     const kb = keyboardFor(
-      { eventType: 'comment.added', provider: 'clickup', taskId: 't1', actor: 'Onboarding Assistant' },
+      {
+        eventType: 'comment.added',
+        provider: 'clickup',
+        taskId: 't1',
+        actor: 'Onboarding Assistant',
+      },
       'c1',
     );
     const hasReply = buttons(kb).some(

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { UnifiedEvent } from '../models/unified.js';
-
 import { fanOut, matchesFilters } from './worker.js';
 
 const event: UnifiedEvent = {
@@ -120,7 +119,9 @@ describe('matchesFilters', () => {
     expect(matchesFilters({ containers: ['list-A'] }, event)).toBe(true);
   });
   it('fails when the task container is not in the filter list', () => {
-    expect(matchesFilters({ containers: ['list-A'] }, { ...event, containerId: 'list-B' })).toBe(false);
+    expect(matchesFilters({ containers: ['list-A'] }, { ...event, containerId: 'list-B' })).toBe(
+      false,
+    );
   });
   it('passes the assignee filter when the owner is an assignee', () => {
     const e = { ...event, details: { assigneeIds: ['u9', 'u42'] } };

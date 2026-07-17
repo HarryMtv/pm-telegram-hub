@@ -20,5 +20,10 @@ export function inc(name: string, labels: Labels = {}, by = 1): void {
 }
 
 export function metricsText(): string {
-  return [...counters.entries()].map(([key, value]) => `${key} ${value}`).sort().join('\n') + '\n';
+  return (
+    [...counters.entries()]
+      .map(([key, value]) => `${key} ${value}`)
+      .sort()
+      .join('\n') + '\n'
+  );
 }

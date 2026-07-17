@@ -1,18 +1,17 @@
 import 'dotenv/config';
 
 import { pathToFileURL } from 'node:url';
-
 import { FastifyInstance } from 'fastify';
 
 import { registerAdapters } from './adapters/index.js';
 import * as apiRoutes from './api/routes.js';
 import * as authRoute from './auth/routes.js';
 import { startBot, stopBot } from './bot/index.js';
+import * as botRoute from './bot/index.js';
 import { config } from './config/index.js';
 import { healthService, withTimeout } from './health.js';
 import { logger } from './logger.js';
 import { metricsText } from './metrics.js';
-import * as botRoute from './bot/index.js';
 import { getRedis } from './queue/connection.js';
 import * as webhookRoutes from './queue/routes.js';
 
@@ -32,19 +31,15 @@ export async function buildServer(opts: AppOptions = {}): Promise<FastifyInstanc
   // Raw-body preservation (webhook-processing spec). The JSON parser stores the
   // original request bytes on `req.rawBody` before parsing, so signature
   // verification always uses the bytes the provider actually sent.
-  app.addContentTypeParser(
-    'application/json',
-    { parseAs: 'buffer' },
-    (req, body: Buffer, done) => {
-      try {
-        const json = body.length ? JSON.parse(body.toString('utf8')) : undefined;
-        req.rawBody = body;
-        done(null, json);
-      } catch (err) {
-        done(err instanceof Error ? err : new Error('Invalid JSON payload'), undefined);
-      }
-    },
-  );
+  app.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body: Buffer, done) => {
+    try {
+      const json = body.length ? JSON.parse(body.toString('utf8')) : undefined;
+      req.rawBody = body;
+      done(null, json);
+    } catch (err) {
+      done(err instanceof Error ? err : new Error('Invalid JSON payload'), undefined);
+    }
+  });
 
   app.get('/health', async () => healthService.report());
   app.get('/metrics', async () => metricsText());
@@ -61,7 +56,12 @@ async function start(): Promise<void> {
   healthService.register({
     name: 'queue',
     check: async () => {
-      const pong = await withTimeout(getRedis().ping().catch(() => null), 1500);
+      const pong = await withTimeout(
+        getRedis()
+          .ping()
+          .catch(() => null),
+        1500,
+      );
       return pong === 'PONG';
     },
   });
@@ -88,7 +88,9 @@ async function start(): Promise<void> {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 
   await app.listen({ port: config.port, host: '0.0.0.0' });
-  await startBot().catch((err) => logger.error({ err: (err as Error).message }, 'bot start failed'));
+  await startBot().catch((err) =>
+    logger.error({ err: (err as Error).message }, 'bot start failed'),
+  );
   logger.info({ port: config.port, mode: config.telegram.botMode }, 'server started');
 }
 

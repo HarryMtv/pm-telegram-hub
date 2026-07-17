@@ -1,5 +1,6 @@
-import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
 import { useEffect, useState } from 'react';
+
+import { retrieveLaunchParams } from '@telegram-apps/sdk-react';
 
 import { api, getToken, setToken } from './api';
 import { Connections } from './Connections';

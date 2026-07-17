@@ -1,10 +1,4 @@
-import type {
-  Container,
-  StatusDef,
-  UnifiedEvent,
-  UnifiedTask,
-} from '../models/unified.js';
-
+import type { Container, StatusDef, UnifiedEvent, UnifiedTask } from '../models/unified.js';
 import type {
   AccountInfo,
   AdapterCapabilities,
@@ -93,7 +87,12 @@ export interface ProviderAdapter {
   createTask(creds: ProviderCredentials, input: CreateTaskInput): Promise<TaskRef>;
   updateTask(creds: ProviderCredentials, taskId: string, patch: TaskPatch): Promise<void>;
   setStatus(creds: ProviderCredentials, taskId: string, statusId: string): Promise<void>;
-  addComment(creds: ProviderCredentials, taskId: string, text: string, opts?: CommentOptions): Promise<void>;
+  addComment(
+    creds: ProviderCredentials,
+    taskId: string,
+    text: string,
+    opts?: CommentOptions,
+  ): Promise<void>;
   getTask(creds: ProviderCredentials, taskId: string): Promise<UnifiedTask>;
 
   // ── Navigation (unified hierarchy) ─────────────────────────────────────────

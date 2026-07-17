@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { config } from '../../config/index.js';
 import { hmacSha256 } from '../../crypto/index.js';
-
 import { WrikeAdapter } from './index.js';
 import {
   mapWrikeCustomStatus,
@@ -88,22 +88,35 @@ describe('Wrike adapter contract', () => {
     expect(adapter.capabilities()).toEqual({ webhookSetup: 'auto', payload: 'minimal' });
   });
 
-  it('handshake echoes X-Hook-Secret only for the empty-body verification request', () => {
-    expect(adapter.handleHandshake({ 'x-hook-secret': 'abc' }, Buffer.alloc(0))).toEqual({
+  it('handshake verifies X-Hook-Signature and responds with hmac(secret, challenge)', () => {
+    const secret = hmacSha256(config.encryptionKeyHex, 'wrike-webhook-signing').toString('hex');
+    const body = Buffer.from('{"requestType": "WebHook secret verification"}');
+    const signature = hmacSha256(secret, body).toString('hex');
+    const challenge = 'abc123xyzChallenge';
+    expect(
+      adapter.handleHandshake({ 'x-hook-secret': challenge, 'x-hook-signature': signature }, body),
+    ).toEqual({
       status: 200,
-      headers: { 'X-Hook-Secret': 'abc' },
+      headers: { 'X-Hook-Secret': hmacSha256(secret, challenge).toString('hex') },
     });
-    // non-empty body → notification, not a handshake
-    expect(adapter.handleHandshake({ 'x-hook-secret': 'abc' }, Buffer.from('[{}]'))).toBeNull();
-    // empty body but no header → not a handshake
-    expect(adapter.handleHandshake({}, Buffer.alloc(0))).toBeNull();
+    // wrong X-Hook-Signature → discard
+    expect(
+      adapter.handleHandshake({ 'x-hook-secret': challenge, 'x-hook-signature': 'deadbeef' }, body),
+    ).toBeNull();
+    // event-array body → notification, not a handshake
+    expect(
+      adapter.handleHandshake(
+        { 'x-hook-secret': challenge, 'x-hook-signature': signature },
+        Buffer.from('[{}]'),
+      ),
+    ).toBeNull();
   });
 
-  it('verifies notification X-Hook-Secret HMAC over the raw body', () => {
+  it('verifies notification X-Hook-Signature HMAC over the raw body', () => {
     const body = Buffer.from('[{"eventType":"TaskStatusChanged"}]');
     const signature = hmacSha256('our-secret', body).toString('hex');
-    expect(adapter.verifyWebhook(body, { 'x-hook-secret': signature }, 'our-secret')).toBe(true);
-    expect(adapter.verifyWebhook(body, { 'x-hook-secret': signature }, 'wrong')).toBe(false);
+    expect(adapter.verifyWebhook(body, { 'x-hook-signature': signature }, 'our-secret')).toBe(true);
+    expect(adapter.verifyWebhook(body, { 'x-hook-signature': signature }, 'wrong')).toBe(false);
     expect(adapter.verifyWebhook(body, {}, 'our-secret')).toBe(false);
   });
 

@@ -43,7 +43,7 @@ src/
   services/        connection service (verify → persist → register webhook)
   server.ts        Fastify app entrypoint (app + bot)
   worker.ts        BullMQ worker entrypoint
-migrations/        SQL migrations (plain SQL; applied via `npm run migrate`)
+migrations/        SQL migrations (plain SQL; applied via `pnpm migrate`)
 docker/            nginx config (TLS, routing)
 ```
 
@@ -52,6 +52,7 @@ docker/            nginx config (TLS, routing)
 ### Prerequisites
 
 - Node.js 22 LTS (`.nvmrc`)
+- pnpm 10 (`corepack enable`)
 - A Telegram bot token (talk to [@BotFather](https://t.me/BotFather))
 - A Supabase project (URL + service role key + the project JWT secret)
 - Redis (local `redis://127.0.0.1:6379` for dev, or Docker)
@@ -71,7 +72,7 @@ missing/invalid values.
 
 ```bash
 # DATABASE_URL = Supabase direct connection string (?sslmode=require)
-DATABASE_URL="postgresql://postgres:...@db.xxx.supabase.co:5432/postgres?sslmode=require" npm run migrate
+DATABASE_URL="postgresql://postgres:...@db.xxx.supabase.co:5432/postgres?sslmode=require" pnpm migrate
 ```
 
 > The RLS migration (0002) references the Supabase-provided `auth.jwt()`. It must
@@ -80,18 +81,30 @@ DATABASE_URL="postgresql://postgres:...@db.xxx.supabase.co:5432/postgres?sslmode
 ### Develop
 
 ```bash
-npm install
-npm run dev          # Fastify app + bot (BOT_MODE=polling by default)
-npm run dev:worker   # BullMQ worker (separate terminal)
-npm test             # unit tests
-npm run typecheck    # tsc --noEmit
+pnpm install
+pnpm dev             # Fastify app + bot (BOT_MODE=polling by default)
+pnpm dev:worker      # BullMQ worker (separate terminal)
+pnpm test            # unit tests
+pnpm typecheck       # tsc --noEmit
 ```
 
 In polling mode the bot long-polls (no public URL needed). In production set
 `BOT_MODE=webhook`; the app registers the webhook at `${APP_URL}/api/telegram`
 with `secret_token` verification.
 
-## Deploy (VPS, Docker Compose)
+## Deploy
+
+Two supported paths — pick one:
+
+- **[Coolify](docs/deploy-coolify.md)** (self-hosted PaaS) — Coolify's proxy
+  handles TLS automatically; deploys `app` + `worker` + `redis` from
+  [`docker-compose.coolify.yml`](docker-compose.coolify.yml). No nginx.
+- **[Your own VPS](docs/deploy-vps.md)** — the root
+  [`docker-compose.yml`](docker-compose.yml) runs `app` + `worker` + `redis` +
+  `nginx` (TLS via certbot).
+
+Quick VPS start (see the [full guide](docs/deploy-vps.md) for env, migrations,
+and certs):
 
 ```bash
 docker compose up -d --build   # app, worker, redis, nginx
@@ -103,6 +116,9 @@ nginx terminates TLS (Let's Encrypt) and routes `api.<domain>` (`/webhooks`,
 
 Health check: `GET /health` → `{ "ok": true, "checks": { "queue": true }, ... }`.
 
+> In both paths, run database migrations from a machine that can reach Supabase
+> (`pnpm migrate`) — they are not applied inside the production container.
+
 ## Bot commands
 
 The bot (English) covers connections/subscriptions, task management (create,
@@ -113,13 +129,13 @@ notifications (💪 Take, ✅ Done, 💬 Comment, ↩️ Reply).
 
 Quick start:
 
-| Command | Purpose |
-| --- | --- |
-| `/connect <provider> <token>` | Connect a provider (token is deleted from chat) |
-| `/subscribe [provider] [me]` | Subscribe this chat (`me` = only tasks assigned to you) |
-| `/newtask <name> [#alias]` | Create a task |
-| `/status <id> done` | Change status (keywords: done / in-progress / open / cancel) |
-| `/comment <id> <text>` | Comment on a task |
+| Command                       | Purpose                                                      |
+| ----------------------------- | ------------------------------------------------------------ |
+| `/connect <provider> <token>` | Connect a provider (token is deleted from chat)              |
+| `/subscribe [provider] [me]`  | Subscribe this chat (`me` = only tasks assigned to you)      |
+| `/newtask <name> [#alias]`    | Create a task                                                |
+| `/status <id> done`           | Change status (keywords: done / in-progress / open / cancel) |
+| `/comment <id> <text>`        | Comment on a task                                            |
 
 Providers needing multiple credential fields (Jira) are connected via the Mini
 App, not `/connect`.
@@ -138,15 +154,15 @@ App, not `/connect`.
 
 ## Scripts
 
-| Script | Purpose |
-| --- | --- |
-| `npm run dev` / `dev:worker` | tsx watch for app / worker |
-| `npm run build` | tsup → `dist/` |
-| `npm start` / `start:worker` | run the built app / worker |
-| `npm test` | vitest |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm run lint` / `format` | ESLint / Prettier |
-| `npm run migrate` | apply SQL migrations |
+| Script                        | Purpose                    |
+| ----------------------------- | -------------------------- |
+| `pnpm dev` / `dev:worker`     | tsx watch for app / worker |
+| `pnpm build`                  | tsup → `dist/`             |
+| `pnpm start` / `start:worker` | run the built app / worker |
+| `pnpm test`                   | vitest                     |
+| `pnpm typecheck`              | `tsc --noEmit`             |
+| `pnpm lint` / `format`        | ESLint / Prettier          |
+| `pnpm migrate`                | apply SQL migrations       |
 
 ## Status
 

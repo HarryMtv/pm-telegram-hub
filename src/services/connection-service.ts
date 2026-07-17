@@ -1,5 +1,5 @@
-import { registry } from '../adapters/index.js';
 import { withConnection } from '../adapters/context.js';
+import { registry } from '../adapters/index.js';
 import { rateLimiters } from '../adapters/rate-limiter.js';
 import type { ProviderCredentials } from '../adapters/types.js';
 import { encrypt, encryptJson } from '../crypto/index.js';
@@ -36,10 +36,17 @@ export async function connectProvider(
 
   let webhookRegistered = false;
   if (adapter.capabilities().webhookSetup === 'auto') {
-    const limiter = rateLimiters.forConnection(connection.id, adapter.rateLimit(connectionCore(connection.id, provider, account.scopeId, credentials)));
+    const limiter = rateLimiters.forConnection(
+      connection.id,
+      adapter.rateLimit(connectionCore(connection.id, provider, account.scopeId, credentials)),
+    );
     const ref = await withConnection(
-      { connection: connectionCore(connection.id, provider, account.scopeId, credentials), limiter },
-      () => adapter.registerWebhook(credentials, { level: 'workspace', workspaceId: account.scopeId }),
+      {
+        connection: connectionCore(connection.id, provider, account.scopeId, credentials),
+        limiter,
+      },
+      () =>
+        adapter.registerWebhook(credentials, { level: 'workspace', workspaceId: account.scopeId }),
     );
     await createWebhook({
       connectionId: connection.id,

@@ -1,0 +1,87 @@
+# Coolify deployment (app + worker + redis).
+#
+# No nginx here: Coolify's built-in proxy (Traefik) terminates TLS (Let's Encrypt)
+# and routes the domain you attach in the UI to the app's exposed port 3000.
+#
+# Both `app` and `worker` need the FULL environment set: src/config/env.ts
+# validates the whole schema at import time and the worker imports it too, so a
+# missing var makes either process fail fast on boot. The anchor below keeps them
+# in sync — set the actual values in Coolify → Environment Variables.
+x-common-env: &common-env
+  NODE_ENV: production
+  PORT: '3000'
+  # Public HTTPS URL of the app. Set it to the domain you attach to `app` in
+  # Coolify (Configuration → Domains). Providers POST to ${APP_URL}/webhooks/:provider
+  # and the bot registers its webhook at ${APP_URL}/api/telegram.
+  APP_URL: ${APP_URL}
+  # Phase 1 has no separate Mini App host; point it at the app URL to satisfy
+  # validation (any valid URL works until the Mini App is deployed in Phase 2).
+  MINIAPP_URL: ${MINIAPP_URL:-${APP_URL}}
+  # Production runs the bot over the webhook (needs the public HTTPS APP_URL above).
+  BOT_MODE: webhook
+  # Redis is reached by service name on the compose network.
+  REDIS_URL: redis://redis:6379
+  # Supabase (managed Postgres) — service key bypasses RLS on the backend.
+  SUPABASE_URL: ${SUPABASE_URL}
+  SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_KEY}
+  # AES-256-GCM key for credentials/webhook secrets — 32 bytes hex (64 chars).
+  # Generate once with `openssl rand -hex 32`. NEVER rotate a live key: every
+  # stored provider credential is encrypted with it and becomes unrecoverable.
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+  # Telegram.
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+  TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET}
+  # Signs the short-lived Mini App JWT.
+  JWT_SECRET: ${JWT_SECRET}
+  # Provider default rate limits (rpm).
+  CLICKUP_RATE_LIMIT_DEFAULT: ${CLICKUP_RATE_LIMIT_DEFAULT:-100}
+  WRIKE_RATE_LIMIT_DEFAULT: ${WRIKE_RATE_LIMIT_DEFAULT:-100}
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node dist/server.js
+    environment:
+      <<: *common-env
+    # Coolify's proxy discovers this port and routes the attached domain to it.
+    expose:
+      - '3000'
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:3000/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node dist/worker.js
+    environment:
+      <<: *common-env
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redis-data:

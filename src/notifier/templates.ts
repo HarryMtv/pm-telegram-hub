@@ -2,10 +2,7 @@ import type { UnifiedEvent, UnifiedTask } from '../models/unified.js';
 
 /** Escape the three characters Telegram HTML parse mode cares about. */
 export function escapeHtml(input: string): string {
-  return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return input.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /** Cap a string for Telegram display, appending an ellipsis if truncated. */
@@ -42,8 +39,17 @@ function statusPair(details: Record<string, unknown>): { oldName?: string; newNa
   const before = details.before;
   const after = details.after;
   return {
-    oldName: pickStr(details.old, typeof before === 'object' && before ? (before as { status?: string }).status : before, details.oldStatus),
-    newName: pickStr(details.new, details.status, typeof after === 'object' && after ? (after as { status?: string }).status : after, details.newStatus),
+    oldName: pickStr(
+      details.old,
+      typeof before === 'object' && before ? (before as { status?: string }).status : before,
+      details.oldStatus,
+    ),
+    newName: pickStr(
+      details.new,
+      details.status,
+      typeof after === 'object' && after ? (after as { status?: string }).status : after,
+      details.newStatus,
+    ),
   };
 }
 
@@ -65,7 +71,7 @@ export function renderEvent(event: UnifiedEvent): string {
     case 'task.assigned': {
       const assignee = pickStr(d.assignee, firstArr(d.newResponsibles), firstArr(d.assignees));
       const actor = pickStr(event.actor, d.author, d.authorId);
-      return `${badge} ${link} → ${assignee ? escapeHtml(assignee) : '?'}${actor ? `, by ${escapeHtml(actor)}` : ''}`;
+      return `${badge} ${link}: assigned to ${assignee ? escapeHtml(assignee) : '?'}${actor ? `, by ${escapeHtml(actor)}` : ''}`;
     }
     case 'task.status_changed': {
       const { oldName, newName } = statusPair(d);

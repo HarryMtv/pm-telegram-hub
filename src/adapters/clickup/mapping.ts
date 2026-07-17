@@ -1,6 +1,11 @@
 import { createHash } from 'node:crypto';
 
-import type { StatusCategory, StatusDef, UnifiedEvent, UnifiedEventType } from '../../models/unified.js';
+import type {
+  StatusCategory,
+  StatusDef,
+  UnifiedEvent,
+  UnifiedEventType,
+} from '../../models/unified.js';
 
 /** ClickUp webhook event name → unified event type (spec §4.1). */
 export const CLICKUP_EVENT_MAP: Record<string, UnifiedEventType> = {

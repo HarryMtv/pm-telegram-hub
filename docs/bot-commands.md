@@ -10,13 +10,13 @@ have several, you must specify it.
 
 ## Connections & subscriptions
 
-| Command | Parameters | Description |
-| --- | --- | --- |
-| `/connect` | `<provider> <token>` | Verify the token, persist the connection (encrypted), register the provider webhook. **The message containing the token is deleted from chat.** |
-| `/subscribe` | `[provider] [me]` | Subscribe this chat to notifications. Idempotent. `me` = only tasks **assigned to you** (resolves your provider user id once). |
-| `/unsubscribe` | `[provider]` | Remove this chat's subscriptions for the connection(s). |
-| `/start` | — | Greeting + button to open the Mini App. |
-| `/help` | — | Quick command reference. |
+| Command        | Parameters           | Description                                                                                                                                     |
+| -------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/connect`     | `<provider> <token>` | Verify the token, persist the connection (encrypted), register the provider webhook. **The message containing the token is deleted from chat.** |
+| `/subscribe`   | `[provider] [me]`    | Subscribe this chat to notifications. Idempotent. `me` = only tasks **assigned to you** (resolves your provider user id once).                  |
+| `/unsubscribe` | `[provider]`         | Remove this chat's subscriptions for the connection(s).                                                                                         |
+| `/start`       | —                    | Greeting + button to open the Mini App.                                                                                                         |
+| `/help`        | —                    | Quick command reference.                                                                                                                        |
 
 Examples:
 
@@ -33,16 +33,16 @@ Examples:
 
 ## Task management
 
-| Command | Parameters | Description |
-| --- | --- | --- |
-| `/newtask` | `<name> [#alias]` | Create a task. With `#alias` it goes to that mapped container; otherwise to your default container (set with `/map … default`). |
-| `/task` | `[provider] <id>` | Show a task card with inline buttons. |
-| `/comment` | `[provider] <id> <text>` | Add a comment. |
-| `/status` | `[provider] <id> <status>` | Change status. `<status>` is a status name or a keyword: `done`, `in-progress`, `open`, `cancel`. |
-| `/assign` | `[provider] <id> @userId` | Add an assignee (provider user id; the leading `@` is optional). |
-| `/due` | `[provider] <id> <date>` | Set the due date. |
-| `/browse` | `[provider]` | List containers (spaces/folders/lists) to find ids. |
-| `/map` | `<alias> <containerId> [provider] [default]` | Create an alias → container mapping used by `/newtask`. Add `default` to make it the default for the provider. |
+| Command    | Parameters                                   | Description                                                                                                                     |
+| ---------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `/newtask` | `<name> [#alias]`                            | Create a task. With `#alias` it goes to that mapped container; otherwise to your default container (set with `/map … default`). |
+| `/task`    | `[provider] <id>`                            | Show a task card with inline buttons.                                                                                           |
+| `/comment` | `[provider] <id> <text>`                     | Add a comment.                                                                                                                  |
+| `/status`  | `[provider] <id> <status>`                   | Change status. `<status>` is a status name or a keyword: `done`, `in-progress`, `open`, `cancel`.                               |
+| `/assign`  | `[provider] <id> @userId`                    | Add an assignee (provider user id; the leading `@` is optional).                                                                |
+| `/due`     | `[provider] <id> <date>`                     | Set the due date.                                                                                                               |
+| `/browse`  | `[provider]`                                 | List containers (spaces/folders/lists) to find ids.                                                                             |
+| `/map`     | `<alias> <containerId> [provider] [default]` | Create an alias → container mapping used by `/newtask`. Add `default` to make it the default for the provider.                  |
 
 Examples:
 
@@ -61,12 +61,12 @@ Examples:
 
 Buttons appear under notifications and `/task` cards:
 
-| Button | Action |
-| --- | --- |
-| 💪 **Take** | Move the task to an `in_progress` status. |
-| ✅ **Done** | Move the task to a `done` status. |
-| 💬 **Comment** | Hint to use `/comment <id> <text>`. |
-| ↩️ **Reply** | _(comments only)_ Open a reply prompt. |
+| Button         | Action                                    |
+| -------------- | ----------------------------------------- |
+| 💪 **Take**    | Move the task to an `in_progress` status. |
+| ✅ **Done**    | Move the task to a `done` status.         |
+| 💬 **Comment** | Hint to use `/comment <id> <text>`.       |
+| ↩️ **Reply**   | _(comments only)_ Open a reply prompt.    |
 
 These act through **unified status categories** — no provider-specific code in
 the core.

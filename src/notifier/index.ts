@@ -1,8 +1,7 @@
 import { keyboardFor } from '../bot/callbacks.js';
 import { getBotApi } from '../bot/instance.js';
-import type { UnifiedEvent } from '../models/unified.js';
 import { logger } from '../logger.js';
-
+import type { UnifiedEvent } from '../models/unified.js';
 import { acquireTelegramSlot } from './limiter.js';
 import { renderEvent } from './templates.js';
 
@@ -19,7 +18,11 @@ export interface SendMessageOptions {
   reply_markup?: unknown;
 }
 
-export type TelegramSender = (chatId: number, text: string, opts: SendMessageOptions) => Promise<number>;
+export type TelegramSender = (
+  chatId: number,
+  text: string,
+  opts: SendMessageOptions,
+) => Promise<number>;
 
 const defaultSender: TelegramSender = async (chatId, text, opts) => {
   const message = await getBotApi().sendMessage(chatId, text, opts as never);
@@ -60,6 +63,9 @@ export async function deliverEvent(
     reply_markup: replyMarkup,
   });
 
-  logger.debug({ chatId, eventType: event.eventType, taskId: event.taskId }, 'notification delivered');
+  logger.debug(
+    { chatId, eventType: event.eventType, taskId: event.taskId },
+    'notification delivered',
+  );
   return messageId;
 }

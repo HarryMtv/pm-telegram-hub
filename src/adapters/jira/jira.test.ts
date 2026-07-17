@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import { hmacSha256 } from '../../crypto/index.js';
-
 import { JiraAdapter } from './index.js';
 import {
   adfToText,
@@ -51,20 +50,31 @@ describe('Jira changelog expansion', () => {
   });
 
   it('maps created / deleted / comment events', () => {
-    expect(parseJiraEvents({ webhookEvent: 'jira:issue_created', issue: { key: 'P-1' } }, headers('d'))[0]?.eventType).toBe(
-      'task.created',
-    );
-    expect(parseJiraEvents({ webhookEvent: 'jira:issue_deleted', issue: { key: 'P-1' } }, headers('d'))[0]?.eventType).toBe(
-      'task.deleted',
-    );
     expect(
-      parseJiraEvents({ webhookEvent: 'comment_created', issue: { key: 'P-1' }, comment: { id: 'c1' } }, headers('d'))[0]
-        ?.eventType,
+      parseJiraEvents(
+        { webhookEvent: 'jira:issue_created', issue: { key: 'P-1' } },
+        headers('d'),
+      )[0]?.eventType,
+    ).toBe('task.created');
+    expect(
+      parseJiraEvents(
+        { webhookEvent: 'jira:issue_deleted', issue: { key: 'P-1' } },
+        headers('d'),
+      )[0]?.eventType,
+    ).toBe('task.deleted');
+    expect(
+      parseJiraEvents(
+        { webhookEvent: 'comment_created', issue: { key: 'P-1' }, comment: { id: 'c1' } },
+        headers('d'),
+      )[0]?.eventType,
     ).toBe('comment.added');
   });
 
   it('falls back to sha256 dedupeKey when no delivery id header', () => {
-    const [event] = parseJiraEvents({ webhookEvent: 'jira:issue_created', issue: { key: 'P-1' } }, {});
+    const [event] = parseJiraEvents(
+      { webhookEvent: 'jira:issue_created', issue: { key: 'P-1' } },
+      {},
+    );
     expect(event?.dedupeKey).toMatch(/^sha256:/);
   });
 });
@@ -77,7 +87,10 @@ describe('Jira status mapping', () => {
   });
 
   it('maps a transition to a StatusDef', () => {
-    const s = mapJiraTransition({ id: '31', to: { name: 'Done', statusCategory: { key: 'done' } } });
+    const s = mapJiraTransition({
+      id: '31',
+      to: { name: 'Done', statusCategory: { key: 'done' } },
+    });
     expect(s).toEqual({ id: '31', name: 'Done', category: 'done' });
   });
 });
@@ -90,7 +103,20 @@ describe('ADF conversion', () => {
   });
 
   it('extracts text from a nested ADF tree', () => {
-    expect(adfToText({ type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'a' }, { type: 'text', text: 'b' }] }] })).toBe('a b');
+    expect(
+      adfToText({
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [
+              { type: 'text', text: 'a' },
+              { type: 'text', text: 'b' },
+            ],
+          },
+        ],
+      }),
+    ).toBe('a b');
   });
 });
 
@@ -107,11 +133,20 @@ describe('Jira adapter contract', () => {
     const sig = `sha256=${hmacSha256('our-secret', body).toString('hex')}`;
     expect(adapter.verifyWebhook(body, { 'x-hub-signature': sig }, 'our-secret')).toBe(true);
     expect(adapter.verifyWebhook(body, { 'x-hub-signature': sig }, 'wrong')).toBe(false);
-    expect(adapter.verifyWebhook(body, { 'x-hub-signature': 'deadbeef' }, 'our-secret')).toBe(false);
+    expect(adapter.verifyWebhook(body, { 'x-hub-signature': 'deadbeef' }, 'our-secret')).toBe(
+      false,
+    );
   });
 
   it('enrichEvent is a no-op (rich payload)', async () => {
-    const event = { provider: 'jira', eventType: 'task.updated' as const, dedupeKey: 'd', taskId: 'P-1', details: {}, raw: {} };
+    const event = {
+      provider: 'jira',
+      eventType: 'task.updated' as const,
+      dedupeKey: 'd',
+      taskId: 'P-1',
+      details: {},
+      raw: {},
+    };
     expect(await adapter.enrichEvent(event, {})).toEqual(event);
   });
 

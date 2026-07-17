@@ -31,4 +31,3 @@ export function bullmqConnection(): {
     username: u.username ? decodeURIComponent(u.username) : undefined,
   };
 }
-

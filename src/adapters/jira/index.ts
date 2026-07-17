@@ -45,7 +45,13 @@ export class JiraAdapter implements ProviderAdapter {
 
   credentialFields(): CredentialField[] {
     return [
-      { key: 'baseUrl', label: 'Jira site URL', type: 'url', required: true, placeholder: 'https://yourteam.atlassian.net' },
+      {
+        key: 'baseUrl',
+        label: 'Jira site URL',
+        type: 'url',
+        required: true,
+        placeholder: 'https://yourteam.atlassian.net',
+      },
       { key: 'email', label: 'Email', type: 'text', required: true },
       { key: 'apiToken', label: 'API token', type: 'password', required: true },
     ];
@@ -103,7 +109,9 @@ export class JiraAdapter implements ProviderAdapter {
     if (input.description) fields.description = textToAdf(input.description);
     if (input.dueDate) fields.duedate = input.dueDate;
     if (input.assignees?.[0]) fields.assignee = { accountId: input.assignees[0] };
-    const res = await this.call(creds, 'POST', '/rest/api/3/issue', { body: JSON.stringify({ fields }) });
+    const res = await this.call(creds, 'POST', '/rest/api/3/issue', {
+      body: JSON.stringify({ fields }),
+    });
     const issue = res.data as { id?: string; key?: string };
     const key = issue.key;
     if (!key) throw new Error('Jira createTask: no key returned');
@@ -117,7 +125,9 @@ export class JiraAdapter implements ProviderAdapter {
     if (patch.dueDate !== undefined) fields.duedate = patch.dueDate === null ? null : patch.dueDate;
     if (patch.addAssignees?.[0]) fields.assignee = { accountId: patch.addAssignees[0] };
     if (patch.removeAssignees?.length) fields.assignee = null;
-    await this.call(creds, 'PUT', `/rest/api/3/issue/${taskId}`, { body: JSON.stringify({ fields }) });
+    await this.call(creds, 'PUT', `/rest/api/3/issue/${taskId}`, {
+      body: JSON.stringify({ fields }),
+    });
   }
 
   /** Status changes are transitions: get them per task, then POST the transition id. */
@@ -174,7 +184,8 @@ export class JiraAdapter implements ProviderAdapter {
   async listContainers(creds: ProviderCredentials): Promise<Container[]> {
     const site = this.baseUrl(creds);
     const res = await this.call(creds, 'GET', '/rest/api/3/project/search');
-    const projects = (res.data as { values?: Array<{ id?: string; key?: string; name?: string }> }).values ?? [];
+    const projects =
+      (res.data as { values?: Array<{ id?: string; key?: string; name?: string }> }).values ?? [];
     return [
       { id: site, name: 'Site', kind: 'root', canContainTasks: false },
       ...projects.map((p) => ({
@@ -201,7 +212,11 @@ export class JiraAdapter implements ProviderAdapter {
   private authHeaders(creds: ProviderCredentials): Record<string, string> {
     const raw = `${creds.email ?? ''}:${creds.apiToken ?? ''}`;
     const basic = Buffer.from(raw).toString('base64');
-    return { Authorization: `Basic ${basic}`, Accept: 'application/json', 'Content-Type': 'application/json' };
+    return {
+      Authorization: `Basic ${basic}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    };
   }
 
   private call(

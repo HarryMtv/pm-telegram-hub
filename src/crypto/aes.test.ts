@@ -25,7 +25,7 @@ describe('aes-256-gcm', () => {
   it('rejects tampered ciphertext via the auth tag', () => {
     const [iv, tag, data] = encrypt('secret').split(':') as [string, string, string];
     const buf = Buffer.from(data, 'base64');
-    buf[buf.length - 1] = (buf[buf.length - 1]! ^ 0xff); // flip last byte
+    buf[buf.length - 1] = buf[buf.length - 1]! ^ 0xff; // flip last byte
     const tampered = [iv, tag, buf.toString('base64')].join(':');
     expect(() => decrypt(tampered)).toThrow();
   });
