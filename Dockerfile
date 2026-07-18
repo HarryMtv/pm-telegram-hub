@@ -1,4 +1,4 @@
-# ── build stage ───────────────────────────────────────────────────────────────
+# ── backend build stage ───────────────────────────────────────────────────────
 FROM node:22-alpine AS build
 WORKDIR /app
 RUN corepack enable
@@ -10,6 +10,15 @@ COPY scripts ./scripts
 COPY migrations ./migrations
 RUN pnpm run build
 
+# ── Mini App build stage (separate pnpm package) ──────────────────────────────
+FROM node:22-alpine AS miniapp-build
+WORKDIR /app/mini-app
+RUN corepack enable
+COPY mini-app/package.json mini-app/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY mini-app/ ./
+RUN pnpm run build
+
 # ── runtime stage (shared by app + worker) ────────────────────────────────────
 FROM node:22-alpine AS runtime
 WORKDIR /app
@@ -19,6 +28,8 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/migrations ./migrations
+# Mini App static build, served by Fastify when SERVE_MINI_APP=true.
+COPY --from=miniapp-build /app/mini-app/dist ./mini-app/dist
 
 # Non-root user for the running process.
 RUN addgroup -S app && adduser -S app -G app

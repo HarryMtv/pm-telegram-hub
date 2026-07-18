@@ -8,6 +8,8 @@ services:
     environment:
       # Redis is reached at the service name within the compose network.
       REDIS_URL: redis://redis:6379
+      # Fastify serves the Mini App's static build (see nginx app.<domain> block).
+      SERVE_MINI_APP: 'true'
     depends_on:
       redis:
         condition: service_healthy
@@ -46,11 +48,9 @@ services:
     volumes:
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./docker/certs:/etc/letsencrypt:ro
-      - miniapp-dist:/usr/share/nginx/html:ro # Vite build, mounted in Phase 2
     depends_on:
       - app
     restart: unless-stopped
 
 volumes:
   redis-data:
-  miniapp-dist:

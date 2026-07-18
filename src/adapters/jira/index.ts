@@ -1,7 +1,5 @@
-import { config } from '../../config/index.js';
 import { verifyHexHmac } from '../../crypto/index.js';
 import type { Container, StatusDef, UnifiedEvent, UnifiedTask } from '../../models/unified.js';
-import { currentConnection } from '../context.js';
 import { providerFetch } from '../http.js';
 import type { ProviderAdapter } from '../provider-adapter.js';
 import type {

@@ -12,6 +12,9 @@ export const config = {
   appUrl: env.APP_URL,
   miniAppUrl: env.MINIAPP_URL,
 
+  /** Serve the Mini App's static build from Fastify (single-image deploy). */
+  serveMiniApp: env.SERVE_MINI_APP,
+
   /** Full public webhook endpoint for a provider, e.g. https://api.../webhooks/clickup. */
   webhookUrlFor(provider: string): string {
     return `${env.APP_URL.replace(/\/+$/, '')}/webhooks/${encodeURIComponent(provider)}`;

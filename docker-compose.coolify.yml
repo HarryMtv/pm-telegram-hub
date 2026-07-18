@@ -14,9 +14,13 @@ x-common-env: &common-env
   # Coolify (Configuration → Domains). Providers POST to ${APP_URL}/webhooks/:provider
   # and the bot registers its webhook at ${APP_URL}/api/telegram.
   APP_URL: ${APP_URL}
-  # Phase 1 has no separate Mini App host; point it at the app URL to satisfy
-  # validation (any valid URL works until the Mini App is deployed in Phase 2).
+  # The Mini App is served by the app itself (SERVE_MINI_APP below), so it lives at
+  # the same origin — MINIAPP_URL defaults to APP_URL.
   MINIAPP_URL: ${MINIAPP_URL:-${APP_URL}}
+  # Serve the Mini App's static build from Fastify so one image ships the whole
+  # stack. Harmless for the worker (it serves no HTTP); kept here so app/worker
+  # share one env block per this file's contract.
+  SERVE_MINI_APP: 'true'
   # Production runs the bot over the webhook (needs the public HTTPS APP_URL above).
   BOT_MODE: webhook
   # Redis is reached by service name on the compose network.

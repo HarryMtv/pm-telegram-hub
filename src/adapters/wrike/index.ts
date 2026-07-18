@@ -113,6 +113,14 @@ export class WrikeAdapter implements ProviderAdapter {
       : new Map<string, string>();
     const name = (id?: string): string | undefined => (id ? (names.get(id) ?? id) : undefined);
 
+    // Wrike webhooks carry only the comment id, not its text — fetch the body so
+    // notifications read "…: <comment>". Best-effort; degrades to no preview.
+    const commentId =
+      event.eventType === 'comment.added' && typeof event.details.commentId === 'string'
+        ? event.details.commentId
+        : undefined;
+    const commentText = commentId ? await this.getCommentText(creds, commentId) : undefined;
+
     return {
       ...event,
       taskName: task.title,
@@ -122,6 +130,7 @@ export class WrikeAdapter implements ProviderAdapter {
       details: {
         ...event.details,
         status: status?.name,
+        commentText,
         // assigneeIds is the canonical key the core's "assigned to me" filter reads
         // (worker.matchesFilters); assignees/newResponsibles are display names.
         assigneeIds: task.responsibleIds ?? [],
@@ -316,12 +325,17 @@ export class WrikeAdapter implements ProviderAdapter {
    * any failure returns an empty map so enrichment degrades to ids, never blocking a
    * notification.
    */
-  private async getContactNames(creds: ProviderCredentials, ids: string[]): Promise<Map<string, string>> {
+  private async getContactNames(
+    creds: ProviderCredentials,
+    ids: string[],
+  ): Promise<Map<string, string>> {
     const map = new Map<string, string>();
     if (!ids.length) return map;
     try {
       const res = await this.call(creds, 'GET', `/contacts/${ids.join(',')}`);
-      const contacts = (res.data as { data?: Array<{ id?: string; firstName?: string; lastName?: string }> }).data ?? [];
+      const contacts =
+        (res.data as { data?: Array<{ id?: string; firstName?: string; lastName?: string }> })
+          .data ?? [];
       for (const c of contacts) {
         if (!c.id) continue;
         const display = [c.firstName, c.lastName].filter(Boolean).join(' ') || c.id;
@@ -331,6 +345,26 @@ export class WrikeAdapter implements ProviderAdapter {
       // degrade to ids
     }
     return map;
+  }
+
+  /**
+   * Fetch a Wrike comment's body as plain text (GET /comments/{id}?plainText=true —
+   * strips the HTML tags Wrike uses for @mentions/links). Best-effort: any failure
+   * returns undefined so a comment notification still fires, just without a preview.
+   */
+  private async getCommentText(
+    creds: ProviderCredentials,
+    commentId: string,
+  ): Promise<string | undefined> {
+    try {
+      const res = await this.call(creds, 'GET', `/comments/${commentId}`, {
+        searchParams: { plainText: 'true' },
+      });
+      const comment = (res.data as { data?: Array<{ text?: string }> }).data?.[0];
+      return comment?.text || undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   private call(

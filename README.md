@@ -110,9 +110,11 @@ and certs):
 docker compose up -d --build   # app, worker, redis, nginx
 ```
 
-nginx terminates TLS (Let's Encrypt) and routes `api.<domain>` (`/webhooks`,
-`/api`, `/health`) to the app; `app.<domain>` serves the Mini App static build
-(Phase 2). Edit `docker/nginx.conf` to set your domains and cert paths.
+The Docker image builds the Mini App and the app serves its static build itself
+(`SERVE_MINI_APP=true`), so both ship in one image — no separate frontend host or
+volume. nginx just terminates TLS (Let's Encrypt) and proxies `api.<domain>`
+(`/webhooks`, `/api`, `/health`) and `app.<domain>` (Mini App + SPA fallback) to
+the app. Edit `docker/nginx.conf` to set your domains and cert paths.
 
 Health check: `GET /health` → `{ "ok": true, "checks": { "queue": true }, ... }`.
 

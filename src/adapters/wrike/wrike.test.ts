@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { config } from '../../config/index.js';
 import { hmacSha256 } from '../../crypto/index.js';
@@ -126,5 +126,120 @@ describe('Wrike adapter contract', () => {
       {},
     );
     expect(events[0]?.eventType).toBe('task.created');
+  });
+});
+
+describe('Wrike enrichEvent comment body', () => {
+  const adapter = new WrikeAdapter();
+  const creds = { token: 'tok' };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** Route the shared HTTP client's global fetch by Wrike API path. */
+  function stubFetch(routes: Record<string, unknown>): ReturnType<typeof vi.fn> {
+    const jsonResponse = (data: unknown) =>
+      ({
+        status: 200,
+        headers: new Headers(),
+        text: async () => JSON.stringify(data),
+      }) as unknown as Response;
+    const fetchMock = vi.fn(async (url: string | URL) => {
+      const path = new URL(url).pathname.replace('/api/v4', '');
+      for (const [prefix, data] of Object.entries(routes)) {
+        if (path.startsWith(prefix)) return jsonResponse(data);
+      }
+      return jsonResponse({ data: [] });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock as unknown as ReturnType<typeof vi.fn>;
+  }
+
+  const commentEvent = () =>
+    parseWrikeEvents([
+      {
+        webhookId: 'IEACW',
+        eventType: 'CommentAdded',
+        taskId: 'IEAAA1',
+        eventAuthorId: 'KUAA1',
+        commentId: 'C1',
+        lastUpdatedDate: '2026-07-18T10:00:00Z',
+      },
+    ])[0]!;
+
+  it('fetches the comment text as plain text into details.commentText', async () => {
+    const fetchMock = stubFetch({
+      '/tasks/': {
+        data: [
+          {
+            id: 'IEAAA1',
+            title: 'MUST-READ: How-to Guide',
+            permalink: 'https://www.wrike.com/open.htm?id=1018695666',
+            responsibleIds: [],
+          },
+        ],
+      },
+      '/workflows': { data: [] },
+      '/contacts/': { data: [{ id: 'KUAA1', firstName: 'Igor', lastName: 'Test' }] },
+      '/comments/': { data: [{ id: 'C1', text: 'Please review this doc' }] },
+    });
+
+    const enriched = await adapter.enrichEvent(commentEvent(), creds);
+
+    expect(enriched.details.commentText).toBe('Please review this doc');
+    // requests plainText=true so Wrike strips @mention/link HTML
+    const commentCall = fetchMock.mock.calls.find(([u]) => String(u).includes('/comments/'));
+    expect(String(commentCall?.[0])).toContain('plainText=true');
+  });
+
+  it('degrades to no preview when the comment fetch fails', async () => {
+    const jsonResponse = (data: unknown) =>
+      ({
+        status: 200,
+        headers: new Headers(),
+        text: async () => JSON.stringify(data),
+      }) as unknown as Response;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string | URL) => {
+        const path = new URL(url).pathname;
+        if (path.includes('/comments/')) {
+          return {
+            status: 500,
+            headers: new Headers(),
+            text: async () => 'boom',
+          } as unknown as Response;
+        }
+        if (path.includes('/tasks/'))
+          return jsonResponse({ data: [{ id: 'IEAAA1', title: 'MUST-READ', responsibleIds: [] }] });
+        return jsonResponse({ data: [] });
+      }),
+    );
+
+    const enriched = await adapter.enrichEvent(commentEvent(), creds);
+
+    expect(enriched.details.commentText).toBeUndefined();
+    expect(enriched.taskName).toBe('MUST-READ');
+  });
+
+  it('does not fetch a comment for non-comment events', async () => {
+    const fetchMock = stubFetch({
+      '/tasks/': { data: [{ id: 'IEAAA2', title: 'Task', responsibleIds: [] }] },
+      '/workflows': { data: [] },
+    });
+
+    const taskEvent = parseWrikeEvents([
+      {
+        eventType: 'TaskCreated',
+        taskId: 'IEAAA2',
+        eventAuthorId: 'KUAA1',
+        lastUpdatedDate: '2026-07-18T10:00:00Z',
+      },
+    ])[0]!;
+    const enriched = await adapter.enrichEvent(taskEvent, creds);
+
+    expect(enriched.details.commentText).toBeUndefined();
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes('/comments/'))).toBe(false);
   });
 });

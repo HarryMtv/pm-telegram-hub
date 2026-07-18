@@ -262,7 +262,7 @@ export function registerCommands(bot: Bot): void {
 
   bot.command('newtask', async (ctx) => {
     const userId = await ensureUser(ctx);
-    const rest = (ctx.msg.text ?? '').replace(/^\/newtask(\@\S+)?\s*/, '');
+    const rest = (ctx.msg.text ?? '').replace(/^\/newtask(@\S+)?\s*/, '');
     const aliasMatch = rest.match(/#([\w-]+)/);
     const alias = aliasMatch?.[1];
     const name = rest.replace(/#[\w-]+/, '').trim();
