@@ -1,14 +1,10 @@
 import type { Bot } from 'grammy';
 import { InlineKeyboard } from 'grammy';
 
-import { withConnection } from '../adapters/context.js';
 import { findStatusByCategory } from '../adapters/contract-helpers.js';
 import { registry } from '../adapters/index.js';
-import type { ProviderAdapter } from '../adapters/provider-adapter.js';
-import { rateLimiters } from '../adapters/rate-limiter.js';
-import type { ProviderCredentials, StatusCategory } from '../adapters/types.js';
+import type { StatusCategory } from '../adapters/types.js';
 import { config } from '../config/index.js';
-import { decryptJson } from '../crypto/index.js';
 import type { ProviderConnectionRow } from '../db/client.js';
 import { getConnectionById, listConnectionsForUser } from '../db/connections.js';
 import { getDefaultMapping, listMappingsForUser, upsertMapping } from '../db/mappings.js';
@@ -21,6 +17,7 @@ import { upsertUserByTelegram } from '../db/users.js';
 import { logger } from '../logger.js';
 import type { StatusDef } from '../models/unified.js';
 import { escapeHtml, providerLabel, renderTaskCard } from '../notifier/templates.js';
+import { runWithConnection } from '../services/adapter-runner.js';
 import { connectProvider } from '../services/connection-service.js';
 import { actionKeyboard, decodeCallback, decodeReply } from './callbacks.js';
 
@@ -53,23 +50,6 @@ async function resolveConnection(userId: string, providerArg?: string): Promise<
   return {
     error: `Multiple connections (${conns.map((c) => c.provider).join(', ')}). Specify a provider.`,
   };
-}
-
-/** Run an adapter call inside the connection's rate-limit context. */
-async function runWithConn<R>(
-  conn: ProviderConnectionRow,
-  fn: (adapter: ProviderAdapter, creds: ProviderCredentials) => Promise<R>,
-): Promise<R> {
-  const adapter = registry.get(conn.provider);
-  const creds = decryptJson<ProviderCredentials>(conn.credentials);
-  const connection = {
-    id: conn.id,
-    provider: conn.provider,
-    scopeId: conn.scope_id,
-    credentials: creds,
-  };
-  const limiter = rateLimiters.forConnection(conn.id, adapter.rateLimit(connection));
-  return withConnection({ connection, limiter }, () => fn(adapter, creds));
 }
 
 const STATUS_KEYWORDS: Record<string, StatusCategory> = {
@@ -135,7 +115,7 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      await runWithConn(conn, (a, c) =>
+      await runWithConnection(conn, (a, c) =>
         a.addComment(c, pending.taskId, text, { mentions: [pending.actorId] }),
       );
       await ctx.reply('✅ Reply posted with a mention of the author.');
@@ -232,7 +212,7 @@ export function registerCommands(bot: Bot): void {
       let filters: Record<string, unknown> | undefined;
       if (onlyMine) {
         try {
-          const account = await runWithConn(conn, (a, c) => a.verifyCredentials(c));
+          const account = await runWithConnection(conn, (a, c) => a.verifyCredentials(c));
           filters = { assignee: account.externalId };
         } catch (err) {
           await ctx.reply(
@@ -302,7 +282,7 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      const ref = await runWithConn(res.conn, (a, c) => a.createTask(c, { name, containerId }));
+      const ref = await runWithConnection(res.conn, (a, c) => a.createTask(c, { name, containerId }));
       await ctx.reply(`✅ Created: ${ref.url}`);
     } catch (err) {
       await ctx.reply(`❌ ${(err as Error).message}`);
@@ -323,7 +303,7 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      const task = await runWithConn(res.conn, (a, c) => a.getTask(c, taskId));
+      const task = await runWithConnection(res.conn, (a, c) => a.getTask(c, taskId));
       await ctx.reply(renderTaskCard(task), {
         parse_mode: 'HTML',
         link_preview_options: { is_disabled: true },
@@ -349,7 +329,7 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      await runWithConn(res.conn, (a, c) => a.addComment(c, taskId, text));
+      await runWithConnection(res.conn, (a, c) => a.addComment(c, taskId, text));
       await ctx.reply('💬 Comment added');
     } catch (err) {
       await ctx.reply(`❌ ${(err as Error).message}`);
@@ -371,13 +351,13 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      const statuses = await runWithConn(res.conn, (a, c) => a.getAvailableStatuses(c, taskId));
+      const statuses = await runWithConnection(res.conn, (a, c) => a.getAvailableStatuses(c, taskId));
       const picked = pickStatus(statuses, statusArg);
       if (!picked) {
         await ctx.reply(`Unavailable. Available: ${statuses.map((s) => s.name).join(', ')}`);
         return;
       }
-      await runWithConn(res.conn, (a, c) => a.setStatus(c, taskId, picked.id));
+      await runWithConnection(res.conn, (a, c) => a.setStatus(c, taskId, picked.id));
       await ctx.reply(`✅ Status: ${picked.name}`);
     } catch (err) {
       await ctx.reply(`❌ ${(err as Error).message}`);
@@ -399,7 +379,7 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      await runWithConn(res.conn, (a, c) => a.updateTask(c, taskId, { addAssignees: [assignee] }));
+      await runWithConnection(res.conn, (a, c) => a.updateTask(c, taskId, { addAssignees: [assignee] }));
       await ctx.reply('✅ Assigned');
     } catch (err) {
       await ctx.reply(`❌ ${(err as Error).message}`);
@@ -421,7 +401,7 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      await runWithConn(res.conn, (a, c) => a.updateTask(c, taskId, { dueDate: due }));
+      await runWithConnection(res.conn, (a, c) => a.updateTask(c, taskId, { dueDate: due }));
       await ctx.reply('✅ Due date updated');
     } catch (err) {
       await ctx.reply(`❌ ${(err as Error).message}`);
@@ -440,7 +420,7 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      const containers = await runWithConn(res.conn, (a, c) => a.listContainers(c));
+      const containers = await runWithConnection(res.conn, (a, c) => a.listContainers(c));
       const text = containers
         .slice(0, 50)
         .map(
@@ -512,32 +492,20 @@ export function registerCommands(bot: Bot): void {
       await ctx.answerCallbackQuery({ text: 'No access' });
       return;
     }
-    const adapter = registry.get(target.provider);
-    const creds = decryptJson<Record<string, string>>(conn.credentials);
-    const connection = {
-      id: conn.id,
-      provider: conn.provider,
-      scopeId: conn.scope_id,
-      credentials: creds,
-    };
-    const limiter = rateLimiters.forConnection(conn.id, adapter.rateLimit(connection));
-
     if (target.action === 'done' || target.action === 'take') {
       const category: StatusCategory = target.action === 'done' ? 'done' : 'in_progress';
       try {
-        const statuses = await withConnection({ connection, limiter }, () =>
-          adapter.getAvailableStatuses(creds, target.taskId),
-        );
-        const status = findStatusByCategory(statuses, category);
-        if (!status) {
-          await ctx.answerCallbackQuery({ text: 'Status unavailable' });
-          return;
-        }
-        await withConnection({ connection, limiter }, () =>
-          adapter.setStatus(creds, target.taskId, status.id),
-        );
-        await ctx.answerCallbackQuery({
-          text: target.action === 'done' ? '✅ Done' : '💪 In progress',
+        await runWithConnection(conn, async (adapter, creds) => {
+          const statuses = await adapter.getAvailableStatuses(creds, target.taskId);
+          const status = findStatusByCategory(statuses, category);
+          if (!status) {
+            await ctx.answerCallbackQuery({ text: 'Status unavailable' });
+            return;
+          }
+          await adapter.setStatus(creds, target.taskId, status.id);
+          await ctx.answerCallbackQuery({
+            text: target.action === 'done' ? '✅ Done' : '💪 In progress',
+          });
         });
       } catch (err) {
         await ctx.answerCallbackQuery({ text: `Error: ${(err as Error).message}` });

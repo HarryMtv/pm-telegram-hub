@@ -10,6 +10,7 @@ import type {
   ProviderCredentials,
   RateLimitConfig,
   TaskPatch,
+  TaskQuery,
   TaskRef,
   WebhookHeaders,
   WebhookRef,
@@ -94,6 +95,14 @@ export interface ProviderAdapter {
     opts?: CommentOptions,
   ): Promise<void>;
   getTask(creds: ProviderCredentials, taskId: string): Promise<UnifiedTask>;
+
+  /**
+   * List tasks for the connection as unified tasks (Mini App unified inbox, spec
+   * §8.2). The adapter applies `query` filters (container, assignee-is-me, status
+   * category, text) using the provider where possible and in-process otherwise, and
+   * runs through the connection owner's rate limiter. ALWAYS returns an array.
+   */
+  listTasks(creds: ProviderCredentials, query?: TaskQuery): Promise<UnifiedTask[]>;
 
   // ── Navigation (unified hierarchy) ─────────────────────────────────────────
 

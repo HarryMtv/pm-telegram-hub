@@ -14,6 +14,7 @@ import type {
   ProviderCredentials,
   RateLimitConfig,
   TaskPatch,
+  TaskQuery,
   TaskRef,
   WebhookHeaders,
   WebhookRef,
@@ -226,6 +227,35 @@ export class WrikeAdapter implements ProviderAdapter {
   async getTask(creds: ProviderCredentials, taskId: string): Promise<UnifiedTask> {
     const task = await this.getRawTask(creds, taskId);
     const statusMap = await this.getStatusMap(creds);
+    return this.toUnifiedTask(task, statusMap);
+  }
+
+  async listTasks(creds: ProviderCredentials, query: TaskQuery = {}): Promise<UnifiedTask[]> {
+    // Wrike task lists omit responsibleIds/description/parentIds unless requested.
+    const params: Record<string, string> = {
+      fields: JSON.stringify(['responsibleIds', 'description', 'parentIds']),
+    };
+    if (query.assigneeIsMe) {
+      const me = await this.getMyContactId(creds);
+      if (me) params.responsibles = JSON.stringify([me]);
+    }
+    const path = query.containerId ? `/folders/${query.containerId}/tasks` : '/tasks';
+    const [res, statusMap] = await Promise.all([
+      this.call(creds, 'GET', path, { searchParams: params }),
+      this.getStatusMap(creds),
+    ]);
+    const rawTasks = (res.data as { data?: WrikeTask[] }).data ?? [];
+    let tasks = rawTasks.map((t) => this.toUnifiedTask(t, statusMap));
+    if (query.statusCategory)
+      tasks = tasks.filter((t) => t.status.category === query.statusCategory);
+    if (query.text) {
+      const needle = query.text.toLowerCase();
+      tasks = tasks.filter((t) => t.name.toLowerCase().includes(needle));
+    }
+    return query.limit ? tasks.slice(0, query.limit) : tasks;
+  }
+
+  private toUnifiedTask(task: WrikeTask, statusMap: Map<string, StatusDef>): UnifiedTask {
     const status = task.customStatusId ? statusMap.get(task.customStatusId) : undefined;
     return {
       provider: this.id,
@@ -404,6 +434,12 @@ export class WrikeAdapter implements ProviderAdapter {
       }
     }
     return map;
+  }
+
+  /** Own Wrike contact id (GET /contacts?me=true) — drives the assignee-is-me filter. */
+  private async getMyContactId(creds: ProviderCredentials): Promise<string | undefined> {
+    const res = await this.call(creds, 'GET', '/contacts', { searchParams: { me: 'true' } });
+    return (res.data as { data?: Array<{ id?: string }> }).data?.[0]?.id;
   }
 
   private async getSpaces(creds: ProviderCredentials) {

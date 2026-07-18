@@ -14,6 +14,7 @@ import type {
   ProviderCredentials,
   RateLimitConfig,
   TaskPatch,
+  TaskQuery,
   TaskRef,
   WebhookHeaders,
   WebhookRef,
@@ -185,6 +186,28 @@ export class ClickUpAdapter implements ProviderAdapter {
   async getTask(creds: ProviderCredentials, taskId: string): Promise<UnifiedTask> {
     const task = await this.getRawTask(creds, taskId);
     return this.toUnifiedTask(task);
+  }
+
+  async listTasks(creds: ProviderCredentials, query: TaskQuery = {}): Promise<UnifiedTask[]> {
+    const teamId = currentConnection()?.scopeId;
+    if (!teamId) return [];
+    const params = new URLSearchParams({ page: '0', subtasks: 'true' });
+    if (query.containerId) params.append('list_ids[]', query.containerId);
+    if (query.assigneeIsMe) {
+      const user = await this.getUser(creds);
+      params.append('assignees[]', String(user.id));
+    }
+    const res = await this.call(creds, 'GET', `/team/${teamId}/task?${params.toString()}`);
+    const rawTasks = (res.data as { tasks?: ClickUpTask[] }).tasks ?? [];
+    let tasks = rawTasks.map((t) => this.toUnifiedTask(t));
+    // ClickUp's team-task filter has no category or free-text param — narrow in-process.
+    if (query.statusCategory)
+      tasks = tasks.filter((t) => t.status.category === query.statusCategory);
+    if (query.text) {
+      const needle = query.text.toLowerCase();
+      tasks = tasks.filter((t) => t.name.toLowerCase().includes(needle));
+    }
+    return query.limit ? tasks.slice(0, query.limit) : tasks;
   }
 
   // ── Navigation ─────────────────────────────────────────────────────────────

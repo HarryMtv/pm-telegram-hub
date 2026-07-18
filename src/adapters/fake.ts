@@ -10,6 +10,7 @@ import type {
   ProviderCredentials,
   RateLimitConfig,
   TaskPatch,
+  TaskQuery,
   TaskRef,
   WebhookHeaders,
   WebhookRef,
@@ -128,13 +129,30 @@ export class FakeAdapter implements ProviderAdapter {
   async addComment(_creds: ProviderCredentials, _taskId: string, _text: string): Promise<void> {}
 
   async getTask(_creds: ProviderCredentials, taskId: string): Promise<UnifiedTask> {
-    const t = this.tasks[taskId];
+    return this.toTask(taskId, this.tasks[taskId]);
+  }
+
+  async listTasks(_creds: ProviderCredentials, query: TaskQuery = {}): Promise<UnifiedTask[]> {
+    let tasks = Object.entries(this.tasks).map(([id, t]) => this.toTask(id, t));
+    if (query.containerId) tasks = tasks.filter((t) => t.containerId === query.containerId);
+    // "assigned to me" is modeled as an assignee literally named 'me' in the fake.
+    if (query.assigneeIsMe) tasks = tasks.filter((t) => t.assignees.includes('me'));
+    if (query.statusCategory)
+      tasks = tasks.filter((t) => t.status.category === query.statusCategory);
+    if (query.text) {
+      const needle = query.text.toLowerCase();
+      tasks = tasks.filter((t) => t.name.toLowerCase().includes(needle));
+    }
+    return query.limit ? tasks.slice(0, query.limit) : tasks;
+  }
+
+  private toTask(taskId: string, t?: Partial<UnifiedTask>): UnifiedTask {
     return {
       provider: this.id,
       id: taskId,
       name: t?.name ?? `Task ${taskId}`,
       description: t?.description,
-      status: this.statuses[0]!,
+      status: t?.status ?? this.statuses[0]!,
       assignees: t?.assignees ?? [],
       dueDate: t?.dueDate,
       url: t?.url ?? `https://fake.test/t/${taskId}`,

@@ -71,7 +71,29 @@ export async function listSubscriptionsForChat(
   return data ?? [];
 }
 
+/** Mini App: all of a user's active subscriptions (across chats). */
+export async function listSubscriptionsForUser(userId: string): Promise<SubscriptionRow[]> {
+  const { data, error } = await getSupabase()
+    .from('subscriptions')
+    .select()
+    .eq('user_id', userId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(`listSubscriptionsForUser failed: ${error.message}`);
+  return data ?? [];
+}
+
 export async function deleteSubscription(id: string): Promise<void> {
   const { error } = await getSupabase().from('subscriptions').delete().eq('id', id);
   if (error) throw new Error(`deleteSubscription failed: ${error.message}`);
+}
+
+/** Ownership-scoped delete for the Mini App; the user_id filter enforces isolation. */
+export async function deleteSubscriptionForUser(id: string, userId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from('subscriptions')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw new Error(`deleteSubscriptionForUser failed: ${error.message}`);
 }

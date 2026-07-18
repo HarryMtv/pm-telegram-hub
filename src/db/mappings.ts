@@ -69,3 +69,13 @@ export async function listMappingsForUser(userId: string): Promise<MappingRow[]>
   if (error) throw new Error(`listMappingsForUser failed: ${error.message}`);
   return data ?? [];
 }
+
+/** Ownership-scoped delete for the Mini App; the user_id filter enforces isolation. */
+export async function deleteMappingForUser(id: string, userId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from('mappings')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+  if (error) throw new Error(`deleteMappingForUser failed: ${error.message}`);
+}

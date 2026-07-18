@@ -11,6 +11,7 @@ import type {
   ProviderCredentials,
   RateLimitConfig,
   TaskPatch,
+  TaskQuery,
   TaskRef,
   WebhookHeaders,
   WebhookRef,
@@ -26,6 +27,25 @@ import {
   type JiraTransition,
   type JiraWebhookPayload,
 } from './mapping.js';
+
+interface JiraIssue {
+  key: string;
+  fields?: {
+    summary?: string;
+    description?: unknown;
+    status?: { name?: string; statusCategory?: { key?: string } };
+    assignee?: { accountId?: string; displayName?: string } | null;
+    duedate?: string;
+    project?: { id?: string };
+  };
+}
+
+/** Unified status category → Jira `statusCategory` JQL value. No Jira category maps to 'cancelled'. */
+const JIRA_CATEGORY_JQL: Record<string, string | undefined> = {
+  open: 'To Do',
+  in_progress: 'In Progress',
+  done: 'Done',
+};
 
 /**
  * Jira Cloud adapter (spec §4.3). This provider dictated the interface's design:
@@ -149,17 +169,28 @@ export class JiraAdapter implements ProviderAdapter {
 
   async getTask(creds: ProviderCredentials, taskId: string): Promise<UnifiedTask> {
     const res = await this.call(creds, 'GET', `/rest/api/3/issue/${taskId}`);
-    const issue = res.data as {
-      key: string;
-      fields?: {
-        summary?: string;
-        description?: unknown;
-        status?: { name?: string; statusCategory?: { key?: string } };
-        assignee?: { accountId?: string; displayName?: string } | null;
-        duedate?: string;
-        project?: { id?: string };
-      };
-    };
+    return this.toUnifiedTask(res.data as JiraIssue, creds);
+  }
+
+  async listTasks(creds: ProviderCredentials, query: TaskQuery = {}): Promise<UnifiedTask[]> {
+    const clauses: string[] = [];
+    if (query.containerId) clauses.push(`project = ${JSON.stringify(query.containerId)}`);
+    if (query.assigneeIsMe) clauses.push('assignee = currentUser()');
+    if (query.text) clauses.push(`summary ~ ${JSON.stringify(query.text)}`);
+    const jira = JIRA_CATEGORY_JQL[query.statusCategory ?? ''];
+    if (jira) clauses.push(`statusCategory = ${JSON.stringify(jira)}`);
+    const jql = clauses.length ? clauses.join(' AND ') : 'order by updated DESC';
+    const params = new URLSearchParams({ jql, maxResults: String(query.limit ?? 50) });
+    const res = await this.call(creds, 'GET', `/rest/api/3/search?${params.toString()}`);
+    const issues = (res.data as { issues?: JiraIssue[] }).issues ?? [];
+    let tasks = issues.map((issue) => this.toUnifiedTask(issue, creds));
+    // Jira has no 'cancelled' statusCategory — narrow such requests in-process.
+    if (query.statusCategory && !jira)
+      tasks = tasks.filter((t) => t.status.category === query.statusCategory);
+    return tasks;
+  }
+
+  private toUnifiedTask(issue: JiraIssue, creds: ProviderCredentials): UnifiedTask {
     const fields = issue.fields ?? {};
     const statusCat = fields.status?.statusCategory?.key;
     return {

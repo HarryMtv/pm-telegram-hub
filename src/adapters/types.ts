@@ -94,6 +94,25 @@ export interface CommentOptions {
   mentions?: string[];
 }
 
+/**
+ * Filters for `listTasks` (Mini App unified inbox). All fields are optional; an
+ * empty query lists the connection's tasks. The adapter applies what the provider
+ * supports server-side and MAY filter the rest in-process. `assigneeIsMe` means
+ * "assigned to the connection's own account" — the adapter resolves the id.
+ */
+export interface TaskQuery {
+  /** Unified container id (ClickUp list, Wrike folder, Jira project). */
+  containerId?: string;
+  /** Only tasks assigned to the connection's own account. */
+  assigneeIsMe?: boolean;
+  /** Only tasks whose status maps to this unified category. */
+  statusCategory?: StatusCategory;
+  /** Case-insensitive substring match on the task name. */
+  text?: string;
+  /** Max tasks to return (adapter default applies when omitted). */
+  limit?: number;
+}
+
 /** Credential form field — drives Mini App rendering and /connect routing. */
 export interface CredentialField {
   key: string;

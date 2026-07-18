@@ -81,6 +81,46 @@ describe('capabilities-driven core behavior', () => {
   });
 });
 
+describe('listTasks (unified inbox)', () => {
+  const fake = new FakeAdapter({
+    tasks: {
+      t1: {
+        name: 'Fix login',
+        assignees: ['me'],
+        containerId: 'list-a',
+        status: { id: 'progress', name: 'In Progress', category: 'in_progress' },
+      },
+      t2: {
+        name: 'Write docs',
+        assignees: ['someone'],
+        containerId: 'list-b',
+        status: { id: 'open', name: 'Open', category: 'open' },
+      },
+    },
+  });
+
+  it('returns all tasks as unified tasks with no filters', async () => {
+    const tasks = await fake.listTasks({});
+    expect(tasks.map((t) => t.id).sort()).toEqual(['t1', 't2']);
+    expect(tasks.every((t) => t.provider === 'fake')).toBe(true);
+  });
+
+  it('filters by container', async () => {
+    const tasks = await fake.listTasks({}, { containerId: 'list-a' });
+    expect(tasks.map((t) => t.id)).toEqual(['t1']);
+  });
+
+  it('filters by assignee-is-me', async () => {
+    const tasks = await fake.listTasks({}, { assigneeIsMe: true });
+    expect(tasks.map((t) => t.id)).toEqual(['t1']);
+  });
+
+  it('filters by status category and text', async () => {
+    expect((await fake.listTasks({}, { statusCategory: 'open' })).map((t) => t.id)).toEqual(['t2']);
+    expect((await fake.listTasks({}, { text: 'login' })).map((t) => t.id)).toEqual(['t1']);
+  });
+});
+
 describe('unified status resolution (inline buttons)', () => {
   it('picks the done status by category with no provider knowledge', async () => {
     const fake = new FakeAdapter({});

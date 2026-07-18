@@ -74,3 +74,9 @@ export async function setConnectionActive(id: string, active: boolean): Promise<
     .eq('id', id);
   if (error) throw new Error(`setConnectionActive failed: ${error.message}`);
 }
+
+/** Hard-delete a connection (its webhooks/subscriptions cascade at the DB level). */
+export async function deleteConnection(id: string): Promise<void> {
+  const { error } = await getSupabase().from('provider_connections').delete().eq('id', id);
+  if (error) throw new Error(`deleteConnection failed: ${error.message}`);
+}
