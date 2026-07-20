@@ -2,8 +2,7 @@
 
 Telegram aggregator (Bot + Mini App) over work systems — ClickUp and Wrike in
 Phase 1, Jira in Phase 3. Provider events are delivered to Telegram as
-notifications; tasks can be managed from chat and the Mini App. See
-`docs/telegram-aggregator-spec.pdf` (v2.3) for the full specification.
+notifications; tasks can be managed from chat and the Mini App.
 
 **Iron rule:** the core (webhook endpoint, worker, notifier, bot, Mini App)
 operates only on unified models. Provider-specific code lives exclusively

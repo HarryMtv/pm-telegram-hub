@@ -1,5 +1,5 @@
 -- 0002_rls.sql — Row Level Security for the Mini App.
--- Spec: docs/telegram-aggregator-spec.pdf §3.1.
+-- Spec: §3.1.
 --
 -- Users authenticate via Telegram, not Supabase Auth, so `auth.uid()` is
 -- useless here. Instead the backend issues a short-lived Supabase-compatible

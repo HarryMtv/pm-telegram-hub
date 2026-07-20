@@ -58,8 +58,9 @@ export function validateInitData(
   return { user, authDate };
 }
 
-/** Sign a short-lived HS256 JWT carrying the `telegram_id` claim (Supabase RLS). */
-export function signTelegramJwt(telegramId: number, ttlSec = AUTH_WINDOW_SEC): string {
+/** Sign a short-lived HS256 JWT carrying the `telegram_id` claim (Supabase RLS).
+ * TTL defaults to `JWT_TTL_SECONDS` (independent of the initData validity window). */
+export function signTelegramJwt(telegramId: number, ttlSec = config.jwtTtlSeconds): string {
   const header = { alg: 'HS256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
   const payload = {

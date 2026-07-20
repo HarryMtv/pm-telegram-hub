@@ -95,7 +95,7 @@ services. On boot the app registers the Telegram webhook at
   token message is deleted and the bot confirms the connection.
 - **Provider webhooks:** ClickUp/Wrike will POST to
   `https://api.your-domain.com/webhooks/<provider>`. Trigger a task change and
-  confirm a notification arrives (see [`verification.md`](verification.md)).
+  confirm a notification arrives.
 
 ## Updating
 

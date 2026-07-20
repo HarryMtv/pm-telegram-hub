@@ -2,7 +2,7 @@
 
 ## Why
 
-Teams that live in Telegram have no native integration with work systems such as ClickUp and Wrike. They rely on email notifications and manual checks. This change builds a Telegram-based aggregator (Integration Service + Bot + Mini App) that delivers provider events to Telegram and lets users manage tasks from chat, per the spec in `docs/telegram-aggregator-spec.pdf` (v2.3).
+Teams that live in Telegram have no native integration with work systems such as ClickUp and Wrike. They rely on email notifications and manual checks. This change builds a Telegram-based aggregator (Integration Service + Bot + Mini App) that delivers provider events to Telegram and lets users manage tasks from chat, per the product specification (v2.3).
 
 Starting Phase 1 with two providers (ClickUp and Wrike) forces an honest adapter abstraction from day one: the core never contains provider-specific code.
 

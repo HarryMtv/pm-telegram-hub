@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Telegram aggregator (Bot + Mini App) over work-management systems: ClickUp and
 Wrike are live (Phase 1), Jira is scaffolded (Phase 3). Provider webhook events
 become Telegram notifications; tasks can be managed from chat and the Mini App.
-The full spec is `docs/telegram-aggregator-spec.pdf` (v2.3); sections are cited
+Sections of the product specification are cited
 in code as `spec §N`.
 
 ## The iron rule (read before touching anything)
@@ -166,5 +166,3 @@ maps to a spec change, prefer that workflow.
 
 - `README.md` — setup, deploy (Docker Compose + nginx), bot command quick-start.
 - `docs/bot-commands.md` — full bot command reference.
-- `docs/verification.md` — Phase 1 end-to-end verification runbook (which
-  behaviors are covered by `pnpm test` vs. require live credentials, marked `[live]`).

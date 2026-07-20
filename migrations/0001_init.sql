@@ -1,5 +1,5 @@
 -- 0001_init.sql — Telegram Aggregator core schema (provider-agnostic).
--- Spec: docs/telegram-aggregator-spec.pdf §3.
+-- Spec: §3.
 --
 -- Iron rule: NO provider-specific columns. Provider-dependent data lives in the
 -- `provider` text column and `jsonb` fields only.

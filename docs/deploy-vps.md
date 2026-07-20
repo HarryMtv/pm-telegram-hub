@@ -116,8 +116,8 @@ On boot the app registers the Telegram webhook at `${APP_URL}/api/telegram`.
   `{ "ok": true, "checks": { "queue": true }, ... }`.
 - **Signature/security:** a webhook with a bad signature returns `401` and
   enqueues nothing; an unknown provider returns `404`.
-- Walk the full runbook in [`verification.md`](verification.md) (connect →
-  subscribe → trigger a notification → inline actions).
+- Walk the full flow manually: connect → subscribe → trigger a notification →
+  inline actions.
 
 ## Operating the deployment
 

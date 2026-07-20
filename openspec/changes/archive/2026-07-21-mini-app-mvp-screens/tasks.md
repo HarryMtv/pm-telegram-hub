@@ -70,5 +70,5 @@
 ## 9. Verification
 
 - [x] 9.1 `pnpm typecheck`, `pnpm lint`, `pnpm test` green (root, 96 tests); `pnpm --dir mini-app build` + dev server boot succeed
-- [ ] 9.2 Manual smoke per `docs/verification.md` — REQUIRES LIVE ENV (Telegram client + provider credentials + running backend/Redis/DB): connect → subscribe → inbox list/detail/status/comment → create task → mapping. Not exercisable in this sandbox.
+- [ ] 9.2 Manual smoke — REQUIRES LIVE ENV (Telegram client + provider credentials + running backend/Redis/DB): connect → subscribe → inbox list/detail/status/comment → create task → mapping. Not exercisable in this sandbox.
 - [x] 9.3 Confirm no core provider-name branching was introduced (iron rule) — only dynamic comparisons against user-supplied provider args remain

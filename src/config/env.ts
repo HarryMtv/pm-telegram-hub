@@ -29,6 +29,9 @@ const envSchema = z.object({
   TELEGRAM_WEBHOOK_SECRET: z.string().min(16),
 
   JWT_SECRET: z.string().min(16),
+  // Lifetime of the Mini App app-JWT, in seconds. Default 1h; raise it to reduce
+  // re-auth churn (the client also re-authenticates transparently on 401).
+  JWT_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60),
 
   REDIS_URL: z.string().default('redis://127.0.0.1:6379'),
 

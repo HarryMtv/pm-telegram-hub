@@ -1,6 +1,6 @@
 # Tasks: implement-telegram-aggregator
 
-Implementation checklist derived from `proposal.md`, `design.md`, and the seven capability specs, sequenced by the spec roadmap (`docs/telegram-aggregator-spec.pdf` v2.3, §12).
+Implementation checklist derived from `proposal.md`, `design.md`, and the seven capability specs, sequenced by the spec roadmap (product specification v2.3, §12).
 
 **Phasing:** Tasks are grouped and ordered by dependency, and labelled by phase. Phase 1 (P0, weeks 1–3) is the notification wedge — bot notifications from ClickUp + Wrike with inline actions — and establishes the provider-agnostic core everything else depends on. Phase 2 (P1, weeks 4–6) adds the Mini App and the task bot. Phase 3 (weeks 7–9) adds the Jira adapter and the unified inbox. Phase 1 must reach a deployable, demoable state before later phases start; many Phase 2/3 tasks extend contracts and screens built in Phase 1.
 
@@ -115,13 +115,13 @@ The iron rule from spec §2 holds throughout: the core operates only on unified 
 - [x] 12.1 Scaffold Vite + React 18 + TypeScript app with `@telegram-apps/sdk-react` (theme, viewport, BackButton, MainButton) and TanStack Query
 - [x] 12.2 Backend `POST /api/auth/init-data`: validate initData signature (key `HMAC_SHA256("WebAppData", BOT_TOKEN)`), check `auth_date` window (~1h), issue short-lived Supabase-compatible JWT with `telegram_id` claim
 - [x] 12.3 Mini App API client: exchange initData for JWT, store/refresh it, attach to requests
-- [ ] 12.4 Wire Telegram theme/viewport and navigation primitives
+- [x] 12.4 Wire Telegram theme/viewport and navigation primitives
 
 ## 13. Mini App screens — Phase 2
 
 - [x] 13.1 Connections screen: connect/disconnect providers; credential forms rendered from adapter metadata; workspace selection; webhook registration, or step-by-step admin instructions when `webhookSetup: 'admin-required'`
-- [ ] 13.2 Subscriptions screen: chats × event types × container filters, container tree from `listContainers`
-- [ ] 13.3 Mappings screen: manage aliases (alias → container, optional default) used by `/newtask`
+- [x] 13.2 Subscriptions screen: chats × event types × container filters, container tree from `listContainers`
+- [x] 13.3 Mappings screen: manage aliases (alias → container, optional default) used by `/newtask`
 
 ## 14. Task bot — P1 commands — Phase 2
 
@@ -137,7 +137,7 @@ The iron rule from spec §2 holds throughout: the core operates only on unified 
 ## 16. Jira adapter (REST API v3) — Phase 3
 
 - [x] 16.1 Basic-auth credentials `{ baseUrl, email, apiToken }`, `scope_id` = site URL, `verifyCredentials`
-- [ ] 16.2 `capabilities()`: `{ webhookSetup: 'admin-required', payload: 'rich' }`; Mini App shows admin webhook instructions (URL + generated secret + event list + optional JQL)
+- [x] 16.2 `capabilities()`: `{ webhookSetup: 'admin-required', payload: 'rich' }`; Mini App shows admin webhook instructions (URL + generated secret + event list + optional JQL)
 - [x] 16.3 `verifyWebhook`: `X-Hub-Signature` in `sha256=<hex>` form, our secret from DB
 - [x] 16.4 `parseEvents`: expand `jira:issue_updated` changelog items into multiple `UnifiedEvent`s; `dedupeKey` from `X-Atlassian-Webhook-Identifier` + changelog-item index
 - [x] 16.5 `enrichEvent` returns the event unchanged (rich payload, no fetch)
@@ -147,7 +147,7 @@ The iron rule from spec §2 holds throughout: the core operates only on unified 
 
 ## 17. Unified inbox & monetization — Phase 3
 
-- [ ] 17.1 Mini App Tasks screen: aggregated feed of `UnifiedTask` across all connected systems with provider badges
+- [x] 17.1 Mini App Tasks screen: aggregated feed of `UnifiedTask` across all connected systems with provider badges
 - [ ] 17.2 Custom message templates per subscription
 - [ ] 17.3 Pricing tiers and payments via Telegram Stars
 

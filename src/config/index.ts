@@ -32,6 +32,7 @@ export const config = {
   },
 
   jwtSecret: env.JWT_SECRET,
+  jwtTtlSeconds: env.JWT_TTL_SECONDS,
 
   redisUrl: env.REDIS_URL,
 

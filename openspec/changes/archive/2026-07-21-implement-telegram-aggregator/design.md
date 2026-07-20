@@ -2,7 +2,7 @@
 
 ## Context
 
-Greenfield repository: no application code yet. The source of truth is `docs/telegram-aggregator-spec.pdf` (v2.3), which defines a Telegram aggregator for work systems: an Integration Service receiving provider webhooks, a Telegram bot for notifications and quick actions, and a Mini App for onboarding, subscriptions, and a unified inbox. Phase 1 ships ClickUp + Wrike; Phase 3 adds Jira Cloud. Solo development, single VPS deployment, managed Supabase.
+Greenfield repository: no application code yet. The source of truth is the product specification (v2.3), which defines a Telegram aggregator for work systems: an Integration Service receiving provider webhooks, a Telegram bot for notifications and quick actions, and a Mini App for onboarding, subscriptions, and a unified inbox. Phase 1 ships ClickUp + Wrike; Phase 3 adds Jira Cloud. Solo development, single VPS deployment, managed Supabase.
 
 Constraints:
 
