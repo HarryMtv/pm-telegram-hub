@@ -10,6 +10,7 @@ have several, you must specify it.
 
 ## Connections & subscriptions
 
+
 | Command        | Parameters           | Description                                                                                                                                     |
 | -------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `/connect`     | `<provider> <token>` | Verify the token, persist the connection (encrypted), register the provider webhook. **The message containing the token is deleted from chat.** |
@@ -18,10 +19,11 @@ have several, you must specify it.
 | `/start`       | —                    | Greeting + button to open the Mini App.                                                                                                         |
 | `/help`        | —                    | Quick command reference.                                                                                                                        |
 
+
 Examples:
 
 ```
-/connect clickup pk_302663612_KOM4H8MWMSAHQ8Z1KWHFPD8ASJK22UJQ
+/connect clickup pk_...
 /subscribe                 # all events on all connections
 /subscribe me              # only tasks assigned to you
 /subscribe wrike me        # only your tasks, Wrike only
@@ -31,7 +33,10 @@ Examples:
 > Providers that need several credential fields (Jira: `baseUrl`, `email`,
 > `apiToken`) are connected through the **Mini App**, not `/connect`.
 
+
+
 ## Task management
+
 
 | Command    | Parameters                                   | Description                                                                                                                     |
 | ---------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -43,6 +48,7 @@ Examples:
 | `/due`     | `[provider] <id> <date>`                     | Set the due date.                                                                                                               |
 | `/browse`  | `[provider]`                                 | List containers (spaces/folders/lists) to find ids.                                                                             |
 | `/map`     | `<alias> <containerId> [provider] [default]` | Create an alias → container mapping used by `/newtask`. Add `default` to make it the default for the provider.                  |
+
 
 Examples:
 
@@ -57,16 +63,20 @@ Examples:
 /due 869e5gd48 2026-08-01
 ```
 
+
+
 ## Inline buttons
 
 Buttons appear under notifications and `/task` cards:
 
+
 | Button         | Action                                    |
 | -------------- | ----------------------------------------- |
 | 💪 **Take**    | Move the task to an `in_progress` status. |
-| ✅ **Done**    | Move the task to a `done` status.         |
+| ✅ **Done**     | Move the task to a `done` status.         |
 | 💬 **Comment** | Hint to use `/comment <id> <text>`.       |
-| ↩️ **Reply**   | _(comments only)_ Open a reply prompt.    |
+| ↩️ **Reply**   | *(comments only)* Open a reply prompt.    |
+
 
 These act through **unified status categories** — no provider-specific code in
 the core.
@@ -82,11 +92,12 @@ ClickUp.
 ## Behavior notes
 
 - **Self-echo suppression (on by default).** Events you triggered yourself — via
-  the bot or directly in the provider — are **not** echoed back to you. You only
-  see what others do. (Applies per connection owner; the bot already acknowledged
-  your own actions.)
+the bot or directly in the provider — are **not** echoed back to you. You only
+see what others do. (Applies per connection owner; the bot already acknowledged
+your own actions.)
 - **Duplicate events collapsed.** Providers like ClickUp fire both a generic
-  `taskUpdated` and a specific event (status/comment/…) for one change; the
-  adapter drops the redundant generic one so you get a single notification.
+`taskUpdated` and a specific event (status/comment/…) for one change; the
+adapter drops the redundant generic one so you get a single notification.
 - **Idempotent delivery.** Re-delivered webhooks never produce duplicate messages
-  (`unique(subscription_id, dedupe_key)`).
+(`unique(subscription_id, dedupe_key)`).
+

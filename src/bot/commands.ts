@@ -143,7 +143,7 @@ export function registerCommands(bot: Bot): void {
         'Providers with multiple fields (Jira) are connected via the Mini App.',
         '',
         'Inline buttons under notifications: 💪 Take · ✅ Done · 💬 Comment',
-        'Full reference: see docs/bot-commands.md',
+        'Full reference: https://github.com/HarryMtv/pm-telegram-hub/blob/main/docs/bot-commands.md',
       ].join('\n'),
     ),
   );
