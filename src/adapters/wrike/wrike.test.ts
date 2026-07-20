@@ -8,8 +8,39 @@ import {
   mapWrikeEvent,
   mapWrikeStatusGroup,
   parseWrikeEvents,
+  wrikeHtmlToText,
   type WrikeWebhookEvent,
 } from './mapping.js';
+
+describe('Wrike HTML description → plain text', () => {
+  it('returns undefined/empty passthrough for missing input', () => {
+    expect(wrikeHtmlToText(undefined)).toBeUndefined();
+    expect(wrikeHtmlToText('')).toBe('');
+  });
+
+  it('strips tags, decodes entities, and formats blocks/lists/links', () => {
+    const html =
+      '<h3><b>What Is a Personal Space?</b></h3>It&#39;s a private part of the workspace.' +
+      '<br /><br /><b><i>Remember:</i></b> stay private.<br /><br />' +
+      '<ol><li>&#64;mention users. <a href="https://help.wrike.com/x">Learn how</a></li>' +
+      '<li>Use the “<i>share&#34;</i> dialogue.</li></ol>';
+    const out = wrikeHtmlToText(html);
+
+    // No markup or raw entities survive.
+    expect(out).not.toMatch(/[<>]/);
+    expect(out).not.toContain('&#');
+    // Entities decoded.
+    expect(out).toContain("It's a private part");
+    expect(out).toContain('@mention users');
+    expect(out).toContain('share"');
+    // Links rendered as "text (url)".
+    expect(out).toContain('Learn how (https://help.wrike.com/x)');
+    // List items become bullets.
+    expect(out).toContain('• @mention users');
+    // No runaway blank lines.
+    expect(out).not.toMatch(/\n{3,}/);
+  });
+});
 
 describe('Wrike event mapping', () => {
   it('maps Wrike events to unified types', () => {

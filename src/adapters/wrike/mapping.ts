@@ -42,6 +42,58 @@ export function mapWrikeEvent(name?: string): UnifiedEventType {
   return WRIKE_EVENT_MAP[name ?? ''] ?? 'task.updated';
 }
 
+const NAMED_ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+};
+
+/** Decode the HTML entities Wrike emits (named + numeric, decimal and hex). */
+function decodeEntities(text: string): string {
+  return text.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, body: string) => {
+    if (body[0] === '#') {
+      const code =
+        body[1] === 'x' || body[1] === 'X'
+          ? parseInt(body.slice(2), 16)
+          : parseInt(body.slice(1), 10);
+      return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+    }
+    return NAMED_ENTITIES[body.toLowerCase()] ?? match;
+  });
+}
+
+/**
+ * Convert a Wrike rich-text (HTML) description to readable plain text, honoring
+ * the unified contract that `UnifiedTask.description` is always plain text. Block
+ * elements and list items become line breaks/bullets and links become
+ * `text (url)`; remaining tags are stripped and entities decoded. Best-effort for
+ * Wrike's HTML subset — not a general HTML parser.
+ */
+export function wrikeHtmlToText(html?: string): string | undefined {
+  if (!html) return html === '' ? '' : undefined;
+  const text = html
+    // Links → "text (url)" (drop the url when it equals the visible text).
+    .replace(/<a\b[^>]*\bhref=["']([^"']*)["'][^>]*>(.*?)<\/a>/gis, (_m, href: string, inner) => {
+      const label = String(inner).replace(/<[^>]+>/g, '').trim();
+      return label && href && label !== href ? `${label} (${href})` : label || href;
+    })
+    // List items → bullet lines.
+    .replace(/<li\b[^>]*>/gi, '\n• ')
+    .replace(/<\/li>/gi, '')
+    // Line breaks and block-level closers → newlines.
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|h[1-6]|tr|ul|ol|blockquote)>/gi, '\n')
+    // Drop any remaining tags.
+    .replace(/<[^>]+>/g, '');
+  return decodeEntities(text)
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 const sha256 = (s: string): string => createHash('sha256').update(s).digest('hex');
 
 /**

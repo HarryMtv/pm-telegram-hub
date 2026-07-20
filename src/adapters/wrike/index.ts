@@ -24,6 +24,7 @@ import { getHeader } from '../types.js';
 import {
   mapWrikeCustomStatus,
   parseWrikeEvents,
+  wrikeHtmlToText,
   type WrikeCustomStatus,
   type WrikeTask,
   type WrikeWebhookPayload,
@@ -261,7 +262,7 @@ export class WrikeAdapter implements ProviderAdapter {
       provider: this.id,
       id: task.id,
       name: task.title ?? task.id,
-      description: task.description,
+      description: wrikeHtmlToText(task.description),
       status: status ?? {
         id: task.customStatusId ?? '',
         name: task.status ?? '',
