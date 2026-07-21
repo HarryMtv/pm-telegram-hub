@@ -9,14 +9,14 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['production', 'development', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
 
-  APP_URL: z.string().url(),
-  MINIAPP_URL: z.string().url(),
+  APP_URL: z.url(),
+  MINIAPP_URL: z.url(),
 
   // Serve the Mini App's Vite build from Fastify itself (single-image deploy).
   // Off by default: in local dev the Mini App runs on its own Vite server.
   SERVE_MINI_APP: booleanish,
 
-  SUPABASE_URL: z.string().url(),
+  SUPABASE_URL: z.url(),
   SUPABASE_SERVICE_KEY: z.string().min(1),
 
   // 32 bytes encoded as 64 hex characters.
