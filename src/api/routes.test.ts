@@ -1,6 +1,13 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { telegramIdFromAuth } from '../auth/jwt.js';
+import { getConnectionById } from '../db/connections.js';
+import { upsertSubscription } from '../db/subscriptions.js';
+import { getUserByTelegramId } from '../db/users.js';
+import { disconnectProvider } from '../services/connection-service.js';
+import { register } from './routes.js';
+
 // Mock every collaborator the exercised routes touch. The point is the route
 // glue: auth guard, ownership checks, and personal-chat resolution.
 vi.mock('../auth/jwt.js', () => ({ telegramIdFromAuth: vi.fn() }));
@@ -18,13 +25,6 @@ vi.mock('../services/connection-service.js', () => ({
   connectProvider: vi.fn(),
   disconnectProvider: vi.fn(),
 }));
-
-import { telegramIdFromAuth } from '../auth/jwt.js';
-import { getConnectionById } from '../db/connections.js';
-import { upsertSubscription } from '../db/subscriptions.js';
-import { getUserByTelegramId } from '../db/users.js';
-import { disconnectProvider } from '../services/connection-service.js';
-import { register } from './routes.js';
 
 const auth = { authorization: 'Bearer t' };
 

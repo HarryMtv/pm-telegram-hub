@@ -77,7 +77,9 @@ export function wrikeHtmlToText(html?: string): string | undefined {
   const text = html
     // Links → "text (url)" (drop the url when it equals the visible text).
     .replace(/<a\b[^>]*\bhref=["']([^"']*)["'][^>]*>(.*?)<\/a>/gis, (_m, href: string, inner) => {
-      const label = String(inner).replace(/<[^>]+>/g, '').trim();
+      const label = String(inner)
+        .replace(/<[^>]+>/g, '')
+        .trim();
       return label && href && label !== href ? `${label} (${href})` : label || href;
     })
     // List items → bullet lines.

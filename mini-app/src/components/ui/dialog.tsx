@@ -1,15 +1,16 @@
 import * as React from 'react';
-
+import { cn } from '@/lib/utils';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-
-import { cn } from '@/lib/utils';
 
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
 const DialogClose = DialogPrimitive.Close;
 
-function DialogOverlay({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+function DialogOverlay({
+  className,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
   return (
     <DialogPrimitive.Overlay
       className={cn(
@@ -47,7 +48,9 @@ function DialogContent({
 }
 
 function DialogHeader({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div className={cn('flex flex-col gap-1 text-center sm:text-left', className)} {...props} />;
+  return (
+    <div className={cn('flex flex-col gap-1 text-center sm:text-left', className)} {...props} />
+  );
 }
 
 function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
@@ -60,9 +63,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
-  return (
-    <DialogPrimitive.Title className={cn('text-lg font-semibold', className)} {...props} />
-  );
+  return <DialogPrimitive.Title className={cn('text-lg font-semibold', className)} {...props} />;
 }
 
 function DialogDescription({

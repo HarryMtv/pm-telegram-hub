@@ -37,8 +37,8 @@ you automatically — no admin setup required.
    exists).
 3. Copy the token — it starts with `pk_`.
 
-> For reference, see ClickUp's own guide: *"Create your own app with the ClickUp
-> API"* in the ClickUp Help Center
+> For reference, see ClickUp's own guide: _"Create your own app with the ClickUp
+> API"_ in the ClickUp Help Center
 > (help.clickup.com → search "Create your own app with the ClickUp API").
 
 ### 2. Connect
@@ -77,7 +77,7 @@ for you automatically — no admin setup required.
 3. Confirm, then copy the token — you won't be able to see it again after
    closing the dialog.
 
-> For reference, see Wrike's own guide: *"Wrike API"* in the Wrike Help Center
+> For reference, see Wrike's own guide: _"Wrike API"_ in the Wrike Help Center
 > (help.wrike.com → search "Wrike API").
 
 ### 2. Connect
@@ -117,8 +117,8 @@ secret to paste after you connect.
    expiry.
 3. Copy the token immediately — it's shown only once.
 
-> For reference, see Atlassian's own guide: *"Manage API tokens for your
-> Atlassian account"* in the Atlassian Support site
+> For reference, see Atlassian's own guide: _"Manage API tokens for your
+> Atlassian account"_ in the Atlassian Support site
 > (support.atlassian.com → search "Manage API tokens").
 
 You'll also need:

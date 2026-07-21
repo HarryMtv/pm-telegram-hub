@@ -282,7 +282,9 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      const ref = await runWithConnection(res.conn, (a, c) => a.createTask(c, { name, containerId }));
+      const ref = await runWithConnection(res.conn, (a, c) =>
+        a.createTask(c, { name, containerId }),
+      );
       await ctx.reply(`✅ Created: ${ref.url}`);
     } catch (err) {
       await ctx.reply(`❌ ${(err as Error).message}`);
@@ -351,7 +353,9 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      const statuses = await runWithConnection(res.conn, (a, c) => a.getAvailableStatuses(c, taskId));
+      const statuses = await runWithConnection(res.conn, (a, c) =>
+        a.getAvailableStatuses(c, taskId),
+      );
       const picked = pickStatus(statuses, statusArg);
       if (!picked) {
         await ctx.reply(`Unavailable. Available: ${statuses.map((s) => s.name).join(', ')}`);
@@ -379,7 +383,9 @@ export function registerCommands(bot: Bot): void {
       return;
     }
     try {
-      await runWithConnection(res.conn, (a, c) => a.updateTask(c, taskId, { addAssignees: [assignee] }));
+      await runWithConnection(res.conn, (a, c) =>
+        a.updateTask(c, taskId, { addAssignees: [assignee] }),
+      );
       await ctx.reply('✅ Assigned');
     } catch (err) {
       await ctx.reply(`❌ ${(err as Error).message}`);

@@ -5,11 +5,7 @@ import type { StatusCategory } from '../adapters/types.js';
 import { telegramIdFromAuth } from '../auth/jwt.js';
 import type { ProviderConnectionRow, UserRow } from '../db/client.js';
 import { getConnectionById, listConnectionsForUser } from '../db/connections.js';
-import {
-  deleteMappingForUser,
-  listMappingsForUser,
-  upsertMapping,
-} from '../db/mappings.js';
+import { deleteMappingForUser, listMappingsForUser, upsertMapping } from '../db/mappings.js';
 import {
   deleteSubscriptionForUser,
   listSubscriptionsForUser,
@@ -286,9 +282,7 @@ export async function register(app: FastifyInstance): Promise<void> {
     const conn = await ownedConnection(user.id, connectionId, reply);
     if (!conn) return;
     try {
-      await runWithConnection(conn, (adapter, creds) =>
-        adapter.setStatus(creds, taskId, statusId),
-      );
+      await runWithConnection(conn, (adapter, creds) => adapter.setStatus(creds, taskId, statusId));
       return reply.send({ ok: true });
     } catch (err) {
       return reply.code(400).send({ error: (err as Error).message });

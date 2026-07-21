@@ -200,7 +200,7 @@ not add `process.env` reads elsewhere, extend the schema instead. Copy
 
 - **ESM throughout** (`"type": "module"`); **imports of local files use the
   `.js` extension** even for `.ts` sources (e.g. `import { registry } from
-  './registry.js'`).
+'./registry.js'`).
 - TypeScript strict mode with `noUncheckedIndexedAccess`,
   `noImplicitOverride`, `noFallthroughCasesInSwitch`; target ES2022,
   `moduleResolution: bundler`.
@@ -255,7 +255,7 @@ not add `process.env` reads elsewhere, extend the schema instead. Copy
   App talks to PostgREST under its own JWT with RLS policies keyed on the
   `telegram_id` claim (migration `0002_rls.sql`).
 - Delivery is idempotent at the DB level (`unique(subscription_id,
-  dedupe_key)`).
+dedupe_key)`).
 - Never commit `.env`; never log decrypted credentials or webhook secrets.
 
 ## Deployment

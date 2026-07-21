@@ -1,14 +1,17 @@
 import * as React from 'react';
-
+import { cn } from '@/lib/utils';
 import * as AccordionPrimitive from '@radix-ui/react-accordion';
 import { ChevronDown } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
-
 const Accordion = AccordionPrimitive.Root;
 
-function AccordionItem({ className, ...props }: React.ComponentProps<typeof AccordionPrimitive.Item>) {
-  return <AccordionPrimitive.Item className={cn('border-b last:border-b-0', className)} {...props} />;
+function AccordionItem({
+  className,
+  ...props
+}: React.ComponentProps<typeof AccordionPrimitive.Item>) {
+  return (
+    <AccordionPrimitive.Item className={cn('border-b last:border-b-0', className)} {...props} />
+  );
 }
 
 function AccordionTrigger({

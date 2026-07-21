@@ -6,11 +6,7 @@ import { rateLimiters } from '../adapters/rate-limiter.js';
 import type { ProviderCredentials } from '../adapters/types.js';
 import { config } from '../config/index.js';
 import { encrypt, encryptJson } from '../crypto/index.js';
-import {
-  createConnection,
-  deleteConnection,
-  getConnectionById,
-} from '../db/connections.js';
+import { createConnection, deleteConnection, getConnectionById } from '../db/connections.js';
 import {
   createWebhook,
   deleteWebhookByProviderId,

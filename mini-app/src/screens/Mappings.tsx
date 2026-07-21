@@ -1,17 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Tags, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-
+import { api } from '@/api';
 import { EmptyState, Screen } from '@/components/Screen';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/api';
 import { useNav } from '@/lib/nav';
 import { qk } from '@/lib/query';
 import { haptic } from '@/lib/telegram';
 import type { Connection, Mapping } from '@/lib/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus, Tags, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { NewMapping } from './NewMapping';
 
 export function Mappings() {

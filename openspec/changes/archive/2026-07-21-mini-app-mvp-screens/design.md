@@ -7,6 +7,7 @@ all provider-specific knowledge lives in adapters (the iron rule in CLAUDE.md). 
 MVP screens are specified (§7.3): Connections, Subscriptions, Unified Inbox, Mappings.
 
 Constraints:
+
 - Iron rule: the core must never branch on a provider name. The inbox needs task
   listing, which the adapter contract does not provide today.
 - Telegram does not expose a user's group chats to the bot, so subscription targets
@@ -18,6 +19,7 @@ Constraints:
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Deliver the four MVP screens with a native-feeling, theme-aware Telegram UI built on
   shadcn components.
 - Extend the adapter contract with `listTasks` so the Unified Inbox works without any
@@ -26,6 +28,7 @@ Constraints:
   `withConnection` rate-limit context) rather than duplicating it.
 
 **Non-Goals:**
+
 - Group-chat subscription targets, chat discovery, or a `known_chats` table.
 - Phase-3 "misc" features: quiet hours, message templates, digest batching, language,
   monetization / Telegram Stars, deep links from notifications.

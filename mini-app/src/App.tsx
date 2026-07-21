@@ -1,15 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react';
-
 import { BottomTabs } from '@/components/BottomTabs';
 import { NavProvider, type TabKey } from '@/lib/nav';
 import { Connections } from '@/screens/Connections';
 import { Inbox } from '@/screens/Inbox';
 import { Mappings } from '@/screens/Mappings';
 import { Subscriptions } from '@/screens/Subscriptions';
+
 import { authenticate, getToken, onAuthLost } from './api';
 
 function Centered({ children }: { children: ReactNode }) {
-  return <div className="grid min-h-dvh place-items-center p-6 text-center text-sm">{children}</div>;
+  return (
+    <div className="grid min-h-dvh place-items-center p-6 text-center text-sm">{children}</div>
+  );
 }
 
 export function App() {

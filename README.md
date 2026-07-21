@@ -45,8 +45,8 @@ produce duplicate messages.
 
 Notifications and `/task` cards carry inline buttons:
 
-- 💪 **Take** — move the task to an *in progress* status
-- ✅ **Done** — move it to a *done* status
+- 💪 **Take** — move the task to an _in progress_ status
+- ✅ **Done** — move it to a _done_ status
 - 💬 **Comment** — hint for `/comment <id> <text>`
 - ↩️ **Reply** — under comment notifications: posts a reply that @mentions the
   original author in the provider (ClickUp)

@@ -1,15 +1,13 @@
 import { useMemo, useState } from 'react';
-
-import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, Folder, Hash } from 'lucide-react';
-
+import { api } from '@/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/api';
 import { qk } from '@/lib/query';
 import { haptic } from '@/lib/telegram';
 import type { Container } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronRight, Folder, Hash } from 'lucide-react';
 
 interface TreeNode extends Container {
   children: TreeNode[];
@@ -73,13 +71,7 @@ export function ContainerTree({ connectionId, mode, selected, onChange }: Contai
   return (
     <div className="rounded-lg border">
       {tree.map((node) => (
-        <TreeNodeRow
-          key={node.id}
-          node={node}
-          depth={0}
-          selected={selected}
-          onToggle={toggle}
-        />
+        <TreeNodeRow key={node.id} node={node} depth={0} selected={selected} onToggle={toggle} />
       ))}
     </div>
   );

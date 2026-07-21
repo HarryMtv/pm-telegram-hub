@@ -1,10 +1,9 @@
-import { CalendarClock } from 'lucide-react';
-
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { STATUS_META } from '@/lib/status';
 import type { FeedTask } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { CalendarClock } from 'lucide-react';
 
 export function TaskCard({ task, onClick }: { task: FeedTask; onClick?: () => void }) {
   const status = STATUS_META[task.status.category];
@@ -37,7 +36,8 @@ export function TaskCard({ task, onClick }: { task: FeedTask; onClick?: () => vo
 
 function formatDue(due: string): string {
   const ms = Number(due);
-  const date = Number.isFinite(ms) && due.length >= 10 && /^\d+$/.test(due) ? new Date(ms) : new Date(due);
+  const date =
+    Number.isFinite(ms) && due.length >= 10 && /^\d+$/.test(due) ? new Date(ms) : new Date(due);
   if (Number.isNaN(date.getTime())) return due;
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }

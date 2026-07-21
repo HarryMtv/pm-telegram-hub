@@ -1,7 +1,5 @@
 import { useState } from 'react';
-
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-
+import { api } from '@/api';
 import { ContainerTree } from '@/components/ContainerTree';
 import { Screen } from '@/components/Screen';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,20 +12,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { api } from '@/api';
 import { useNav } from '@/lib/nav';
 import { qk } from '@/lib/query';
 import { haptic, useMainButton } from '@/lib/telegram';
-import { EVENT_TYPES, type Connection } from '@/lib/types';
+import { EVENT_TYPES, type Connection, type Subscription } from '@/lib/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 const DEFAULT_EVENTS = EVENT_TYPES.map((e) => e.value);
 
-export function NewSubscription() {
+function initialContainers(sub?: Subscription): string[] {
+  const c = sub?.filters.containers;
+  return Array.isArray(c) ? (c as string[]) : [];
+}
+
+export function NewSubscription({ edit }: { edit?: Subscription } = {}) {
   const qc = useQueryClient();
   const { pop } = useNav();
-  const [connectionId, setConnectionId] = useState<string>('');
-  const [events, setEvents] = useState<string[]>(DEFAULT_EVENTS);
-  const [containers, setContainers] = useState<string[]>([]);
+  const isEdit = Boolean(edit);
+  const [connectionId, setConnectionId] = useState<string>(edit?.connectionId ?? '');
+  const [events, setEvents] = useState<string[]>(edit?.eventTypes ?? DEFAULT_EVENTS);
+  const [containers, setContainers] = useState<string[]>(initialContainers(edit));
 
   const connsQ = useQuery({
     queryKey: qk.connections,
@@ -54,7 +58,7 @@ export function NewSubscription() {
 
   const canSave = Boolean(connectionId) && events.length > 0;
   useMainButton({
-    text: 'Save subscription',
+    text: isEdit ? 'Save changes' : 'Save subscription',
     onClick: () => canSave && save.mutate(),
     enabled: canSave,
     loading: save.isPending,
@@ -66,13 +70,13 @@ export function NewSubscription() {
   }
 
   return (
-    <Screen title="New subscription">
+    <Screen title={isEdit ? 'Edit subscription' : 'New subscription'}>
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Provider</CardTitle>
         </CardHeader>
         <CardContent>
-          <Select value={connectionId} onValueChange={setConnectionId}>
+          <Select value={connectionId} onValueChange={setConnectionId} disabled={isEdit}>
             <SelectTrigger>
               <SelectValue placeholder="Choose a connection" />
             </SelectTrigger>
@@ -95,7 +99,10 @@ export function NewSubscription() {
           {EVENT_TYPES.map((e) => (
             <Label key={e.value} className="justify-between font-normal">
               {e.label}
-              <Checkbox checked={events.includes(e.value)} onCheckedChange={() => toggleEvent(e.value)} />
+              <Checkbox
+                checked={events.includes(e.value)}
+                onCheckedChange={() => toggleEvent(e.value)}
+              />
             </Label>
           ))}
         </CardContent>

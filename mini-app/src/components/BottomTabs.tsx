@@ -1,8 +1,7 @@
-import { Bell, Inbox, Plug, Tags, type LucideIcon } from 'lucide-react';
-
 import { useNav, type TabKey } from '@/lib/nav';
 import { haptic } from '@/lib/telegram';
 import { cn } from '@/lib/utils';
+import { Bell, Inbox, Plug, Tags, type LucideIcon } from 'lucide-react';
 
 const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
   { key: 'connections', label: 'Connections', icon: Plug },

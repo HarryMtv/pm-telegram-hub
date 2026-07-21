@@ -1,9 +1,5 @@
 import { useState } from 'react';
-
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Copy, Loader2, Plug, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-
+import { api } from '@/api';
 import { EmptyState, Screen } from '@/components/Screen';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,10 +15,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/api';
 import { qk } from '@/lib/query';
 import { haptic } from '@/lib/telegram';
 import type { AdapterMeta, Connection } from '@/lib/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Copy, Loader2, Plug, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Onboarding {
   webhookUrl: string;

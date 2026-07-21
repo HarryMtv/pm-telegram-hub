@@ -1,9 +1,5 @@
 import { useState } from 'react';
-
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink, Loader2, Send } from 'lucide-react';
-import { toast } from 'sonner';
-
+import { api } from '@/api';
 import { Screen } from '@/components/Screen';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,11 +14,13 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { api } from '@/api';
 import { qk } from '@/lib/query';
 import { STATUS_META } from '@/lib/status';
 import { haptic } from '@/lib/telegram';
 import type { FeedTask, StatusDef } from '@/lib/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ExternalLink, Loader2, Send } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function TaskDetail({ task }: { task: FeedTask }) {
   const qc = useQueryClient();
@@ -31,8 +29,7 @@ export function TaskDetail({ task }: { task: FeedTask }) {
 
   const detailQ = useQuery({
     queryKey: qk.task(connectionId, id),
-    queryFn: () =>
-      api(`/api/tasks/${connectionId}/${id}`) as Promise<{ task: FeedTask }>,
+    queryFn: () => api(`/api/tasks/${connectionId}/${id}`) as Promise<{ task: FeedTask }>,
   });
   const statusesQ = useQuery({
     queryKey: qk.taskStatuses(connectionId, id),
@@ -91,7 +88,9 @@ export function TaskDetail({ task }: { task: FeedTask }) {
           {detailQ.isLoading ? (
             <Skeleton className="h-12 w-full" />
           ) : detail.description ? (
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{detail.description}</p>
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+              {detail.description}
+            </p>
           ) : null}
           <a href={detail.url} target="_blank" rel="noreferrer">
             <Button variant="outline" className="w-full">

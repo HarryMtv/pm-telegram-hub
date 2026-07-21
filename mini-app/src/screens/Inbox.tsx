@@ -1,8 +1,5 @@
 import { useState } from 'react';
-
-import { useQuery } from '@tanstack/react-query';
-import { Plus, Search } from 'lucide-react';
-
+import { api } from '@/api';
 import { EmptyState, Screen } from '@/components/Screen';
 import { TaskCard } from '@/components/TaskCard';
 import { Button } from '@/components/ui/button';
@@ -16,11 +13,13 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { api } from '@/api';
 import { useNav } from '@/lib/nav';
 import { qk } from '@/lib/query';
 import { STATUS_META, STATUS_ORDER } from '@/lib/status';
 import type { Connection, FeedTask, StatusCategory } from '@/lib/types';
+import { useQuery } from '@tanstack/react-query';
+import { Plus, Search } from 'lucide-react';
+
 import { CreateTask } from './CreateTask';
 import { TaskDetail } from './TaskDetail';
 
@@ -97,7 +96,11 @@ export function Inbox() {
             ))}
           </SelectContent>
         </Select>
-        <Tabs value={view} onValueChange={(v) => setView(v as 'list' | 'board')} className="ml-auto">
+        <Tabs
+          value={view}
+          onValueChange={(v) => setView(v as 'list' | 'board')}
+          className="ml-auto"
+        >
           <TabsList>
             <TabsTrigger value="list">List</TabsTrigger>
             <TabsTrigger value="board">Board</TabsTrigger>
@@ -116,7 +119,11 @@ export function Inbox() {
       ) : view === 'list' ? (
         <div className="space-y-2">
           {tasks.map((t) => (
-            <TaskCard key={`${t.connectionId}:${t.id}`} task={t} onClick={() => push(<TaskDetail task={t} />)} />
+            <TaskCard
+              key={`${t.connectionId}:${t.id}`}
+              task={t}
+              onClick={() => push(<TaskDetail task={t} />)}
+            />
           ))}
         </div>
       ) : (
@@ -135,7 +142,10 @@ function Board({ tasks, onOpen }: { tasks: FeedTask[]; onOpen: (t: FeedTask) => 
         return (
           <div key={cat} className="w-64 shrink-0 space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium">
-              <span className="size-2 rounded-full" style={{ background: STATUS_META[cat].color }} />
+              <span
+                className="size-2 rounded-full"
+                style={{ background: STATUS_META[cat].color }}
+              />
               {STATUS_META[cat].label}
               <span className="text-muted-foreground">{col.length}</span>
             </div>

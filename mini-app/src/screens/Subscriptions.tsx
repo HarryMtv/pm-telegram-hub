@@ -1,17 +1,17 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, Plus, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
-
+import { api } from '@/api';
 import { EmptyState, Screen } from '@/components/Screen';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { api } from '@/api';
 import { useNav } from '@/lib/nav';
 import { qk } from '@/lib/query';
 import { haptic } from '@/lib/telegram';
 import { EVENT_TYPES, type Connection, type Subscription } from '@/lib/types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Bell, Pencil, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+
 import { NewSubscription } from './NewSubscription';
 
 const EVENT_LABEL = new Map(EVENT_TYPES.map((e) => [e.value, e.label]));
@@ -71,14 +71,23 @@ export function Subscriptions() {
                   <Bell className="size-4 text-muted-foreground" />
                   <CardTitle className="capitalize">{providerOf(s.connectionId)}</CardTitle>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-destructive"
-                  onClick={() => remove.mutate(s.id)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => push(<NewSubscription edit={s} />)}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-destructive"
+                    onClick={() => remove.mutate(s.id)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 <div className="flex flex-wrap gap-1">

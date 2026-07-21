@@ -235,7 +235,9 @@ export class JiraAdapter implements ProviderAdapter {
   // ── API helpers ─────────────────────────────────────────────────────────────
 
   private baseUrl(creds: ProviderCredentials): string {
-    const raw = String(creds.baseUrl ?? '').trim().replace(/\/+$/, '');
+    const raw = String(creds.baseUrl ?? '')
+      .trim()
+      .replace(/\/+$/, '');
     // Users paste the site host without a scheme; default to https.
     return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
   }
