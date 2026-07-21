@@ -1,14 +1,81 @@
 # pm-telegram-hub
 
-Telegram aggregator (Bot + Mini App) over work systems — ClickUp and Wrike in
-Phase 1, Jira in Phase 3. Provider events are delivered to Telegram as
-notifications; tasks can be managed from chat and the Mini App.
+A Telegram bot + Mini App that puts your work systems in your pocket. Events
+from ClickUp and Wrike (Jira is being added) — task created, status changed,
+comment added — arrive as Telegram notifications, and you can act on tasks
+right from the chat or the Mini App: take, complete, comment, reassign, set
+due dates.
 
-**Iron rule:** the core (webhook endpoint, worker, notifier, bot, Mini App)
-operates only on unified models. Provider-specific code lives exclusively
-inside an adapter. A new provider = one adapter file + one registry entry.
+- **I want to use the bot** → [Using the bot](#using-the-bot)
+- **I want to run/develop it** → [Running your own instance](#running-your-own-instance)
 
-## Architecture
+## Using the bot
+
+### 1. Start
+
+Open the bot in Telegram and send `/start`. You get a greeting and a button
+that opens the **Mini App**.
+
+### 2. Connect a provider
+
+```
+/connect clickup pk_...
+```
+
+The token is verified, stored encrypted, and the message containing it is
+deleted from the chat immediately. Providers that need several credential
+fields (Jira: `baseUrl`, `email`, `apiToken`) are connected from the Mini
+App's **Connections** screen instead.
+
+**Step-by-step: how to create a token and connect each provider (ClickUp,
+Wrike, Jira): [`docs/connect-providers.md`](docs/connect-providers.md).**
+
+### 3. Subscribe to notifications
+
+```
+/subscribe        # all events on all your connections
+/subscribe me     # only tasks assigned to you
+```
+
+From then on, matching provider events land in the chat as notifications.
+Your own actions are not echoed back to you, and re-delivered webhooks never
+produce duplicate messages.
+
+### 4. Act on tasks from the chat
+
+Notifications and `/task` cards carry inline buttons:
+
+- 💪 **Take** — move the task to an *in progress* status
+- ✅ **Done** — move it to a *done* status
+- 💬 **Comment** — hint for `/comment <id> <text>`
+- ↩️ **Reply** — under comment notifications: posts a reply that @mentions the
+  original author in the provider (ClickUp)
+
+For everything else there are commands:
+
+```
+/newtask Fix the login #inbox      # create a task (find containers with /browse, alias them with /map)
+/status 869e5gd48 done             # keywords: done / in-progress / open / cancel
+/comment 869e5gd48 shipping it
+/assign 869e5gd48 @302663612
+/due 869e5gd48 2026-08-01
+```
+
+**Full command reference with parameters and examples: [`docs/bot-commands.md`](docs/bot-commands.md)**
+
+**How to create tokens and connect each provider (ClickUp, Wrike, Jira): [`docs/connect-providers.md`](docs/connect-providers.md)**
+
+### 5. The Mini App
+
+Tap the button in `/start` (or the bot's menu button) to open the Mini App:
+
+- **Inbox** — your task feed across all connections, with a task detail view
+- **Create task** — into a chosen container
+- **Connections** — connect providers, including multi-field ones like Jira
+- **Subscriptions** — manage which chats receive which events
+- **Mappings** — alias → container shortcuts used by `/newtask`
+
+## How it works
 
 ```
 Provider webhooks ─► POST /webhooks/:provider ─► BullMQ (Redis) ─► worker
@@ -25,13 +92,17 @@ Provider webhooks ─► POST /webhooks/:provider ─► BullMQ (Redis) ─► w
 - **Worker** — separate BullMQ worker process; scales independently.
 - **DB** — Supabase (PostgreSQL). Provider-agnostic schema; credentials and
   webhook secrets are AES-256-GCM encrypted at the application boundary.
-- **Mini App** — React + Vite (Phase 2).
+- **Mini App** — React 19 + Vite, TanStack Query, `@telegram-apps/sdk`.
+
+**Iron rule:** the core (webhook endpoint, worker, notifier, bot, Mini App)
+operates only on unified models. Provider-specific code lives exclusively
+inside an adapter. A new provider = one adapter file + one registry entry.
 
 ### Repository layout
 
 ```
 src/
-  adapters/        ProviderAdapter contract, registry, rate limiter, clickup/, wrike/
+  adapters/        ProviderAdapter contract, registry, rate limiter, clickup/, wrike/, jira/
   bot/             grammY bot: commands, inline-callback actions, webhook/polling
   config/          zod-validated environment
   crypto/          AES-256-GCM + HMAC helpers
@@ -46,7 +117,7 @@ migrations/        SQL migrations (plain SQL; applied via `pnpm migrate`)
 docker/            nginx config (TLS, routing)
 ```
 
-## Getting started
+## Running your own instance
 
 ### Prerequisites
 
@@ -64,8 +135,8 @@ cp .env.example .env
 #   ENCRYPTION_KEY (openssl rand -hex 32), JWT_SECRET, APP_URL, MINIAPP_URL
 ```
 
-All configuration is environment-driven (spec §9); the app fails fast on
-missing/invalid values.
+All configuration is environment-driven; the app fails fast on missing or
+invalid values.
 
 ### Migrate
 
@@ -120,27 +191,6 @@ Health check: `GET /health` → `{ "ok": true, "checks": { "queue": true }, ... 
 > In both paths, run database migrations from a machine that can reach Supabase
 > (`pnpm migrate`) — they are not applied inside the production container.
 
-## Bot commands
-
-The bot (English) covers connections/subscriptions, task management (create,
-status, comment, assign, due, browse, map), and inline actions under
-notifications (💪 Take, ✅ Done, 💬 Comment, ↩️ Reply).
-
-**Full command reference — parameters and examples: [`docs/bot-commands.md`](docs/bot-commands.md)**
-
-Quick start:
-
-| Command                       | Purpose                                                      |
-| ----------------------------- | ------------------------------------------------------------ |
-| `/connect <provider> <token>` | Connect a provider (token is deleted from chat)              |
-| `/subscribe [provider] [me]`  | Subscribe this chat (`me` = only tasks assigned to you)      |
-| `/newtask <name> [#alias]`    | Create a task                                                |
-| `/status <id> done`           | Change status (keywords: done / in-progress / open / cancel) |
-| `/comment <id> <text>`        | Comment on a task                                            |
-
-Providers needing multiple credential fields (Jira) are connected via the Mini
-App, not `/connect`.
-
 ## Security
 
 - Provider credentials and webhook secrets are AES-256-GCM encrypted at rest
@@ -167,8 +217,8 @@ App, not `/connect`.
 
 ## Status
 
-Phase 1 (P0) — notifications + inline actions for ClickUp and Wrike — is
-implemented. The provider-agnostic core and adapter contract are in place; Jira
-(Phase 3) slots in via the §4.4 checklist without core changes. Live provider
-API surfaces (exact request/response shapes) should be confirmed against the
-real APIs with credentials during first integration.
+ClickUp and Wrike are fully wired — notifications and inline actions work end
+to end. The provider-agnostic core and adapter contract are in place; Jira
+slots in through the adapter checklist without core changes. Live provider API
+surfaces (exact request/response shapes) should be confirmed against the real
+APIs with credentials during first integration.

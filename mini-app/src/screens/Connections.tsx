@@ -205,13 +205,14 @@ function CopyRow({ label, value, mono }: { label: string; value: string; mono?: 
       <Label>{label}</Label>
       <div className="flex items-center gap-2">
         <code
-          className={`flex-1 truncate rounded-md bg-muted px-2 py-1.5 text-xs ${mono ? 'font-mono' : ''}`}
+          className={`min-w-0 flex-1 truncate rounded-md bg-muted px-2 py-1.5 text-xs ${mono ? 'font-mono' : ''}`}
         >
           {value}
         </code>
         <Button
           variant="outline"
           size="icon"
+          className="shrink-0"
           onClick={() => {
             void navigator.clipboard?.writeText(value);
             haptic.impact('light');

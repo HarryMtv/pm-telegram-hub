@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { hmacSha256 } from '../../crypto/index.js';
 import { JiraAdapter } from './index.js';
@@ -152,5 +152,48 @@ describe('Jira adapter contract', () => {
 
   it('extracts webhook_id from the payload', () => {
     expect(adapter.extractWebhookId({ webhook_id: 'wh-9' })).toBe('wh-9');
+  });
+});
+
+describe('Jira baseUrl normalization', () => {
+  const adapter = new JiraAdapter();
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function stubMyself() {
+    const fetchMock = vi.fn(
+      async (_url: string | URL) =>
+        ({
+          status: 200,
+          headers: new Headers(),
+          text: async () => JSON.stringify({ accountId: 'a1', displayName: 'Gosha' }),
+        }) as unknown as Response,
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('defaults a schemeless site host to https', async () => {
+    const fetchMock = stubMyself();
+    await adapter.verifyCredentials({
+      baseUrl: 'alaventus.atlassian.net',
+      email: 'e@x.com',
+      apiToken: 't',
+    });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      'https://alaventus.atlassian.net/rest/api/3/myself',
+    );
+  });
+
+  it('keeps an explicit scheme and strips trailing slashes', async () => {
+    const fetchMock = stubMyself();
+    await adapter.verifyCredentials({
+      baseUrl: 'http://localhost:8080/',
+      email: 'e@x.com',
+      apiToken: 't',
+    });
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe('http://localhost:8080/rest/api/3/myself');
   });
 });
