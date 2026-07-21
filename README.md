@@ -30,6 +30,14 @@ App's **Connections** screen instead.
 **Step-by-step: how to create a token and connect each provider (ClickUp,
 Wrike, Jira): [`docs/connect-providers.md`](docs/connect-providers.md).**
 
+> **🔒 Your tokens are safe.** Every API token and webhook secret you provide is
+> **encrypted at rest** (AES-256-GCM) before it touches the database — the
+> encryption key stays on the server and is never stored alongside your data or
+> sent back to any client. The bot never displays your token again, and the
+> `/connect` message carrying it is deleted from the chat as soon as it's
+> verified. If a token ever leaks, revoke it in the provider's console and
+> reconnect. See [Security](#security) for the technical details.
+
 ### 3. Subscribe to notifications
 
 ```

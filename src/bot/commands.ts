@@ -156,6 +156,15 @@ export function registerCommands(bot: Bot): void {
       await ctx.reply('Usage: /connect <provider> <token>');
       return;
     }
+
+    // Remove the token from chat history immediately — before any validation or
+    // network call — so it never lingers if the connection later fails.
+    try {
+      await ctx.deleteMessage();
+    } catch {
+      // best-effort — older messages can't be deleted
+    }
+
     if (!registry.has(provider)) {
       await ctx.reply(`Unknown provider: ${escapeHtml(provider)}`);
       return;
@@ -181,14 +190,6 @@ export function registerCommands(bot: Bot): void {
     } catch (err) {
       logger.warn({ err: (err as Error).message, provider }, 'connect failed');
       await ctx.reply(`❌ Failed to connect: ${escapeHtml((err as Error).message)}`);
-      return;
-    }
-
-    // Remove the token from chat history.
-    try {
-      await ctx.deleteMessage();
-    } catch {
-      // best-effort — older messages can't be deleted
     }
   });
 
