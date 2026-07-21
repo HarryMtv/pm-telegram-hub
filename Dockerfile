@@ -1,7 +1,8 @@
 # ── backend build stage ───────────────────────────────────────────────────────
 FROM node:26-alpine AS build
 WORKDIR /app
-RUN corepack enable
+# corepack is no longer bundled in the Node 26 images — install it explicitly.
+RUN npm install -g corepack@latest && corepack enable
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY tsconfig.json tsup.config.ts ./
@@ -13,7 +14,8 @@ RUN pnpm run build
 # ── Mini App build stage (separate pnpm package) ──────────────────────────────
 FROM node:26-alpine AS miniapp-build
 WORKDIR /app/mini-app
-RUN corepack enable
+# corepack is no longer bundled in the Node 26 images — install it explicitly.
+RUN npm install -g corepack@latest && corepack enable
 COPY mini-app/package.json mini-app/pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY mini-app/ ./
@@ -23,7 +25,8 @@ RUN pnpm run build
 FROM node:26-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
-RUN corepack enable
+# corepack is no longer bundled in the Node 26 images — install it explicitly.
+RUN npm install -g corepack@latest && corepack enable
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 COPY --from=build /app/dist ./dist
