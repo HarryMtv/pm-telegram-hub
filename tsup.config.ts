@@ -6,7 +6,7 @@ export default defineConfig({
     worker: 'src/worker.ts',
   },
   format: ['esm'],
-  target: 'node22',
+  target: 'node26',
   platform: 'node',
   sourcemap: true,
   clean: true,

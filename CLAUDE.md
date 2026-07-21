@@ -30,7 +30,7 @@ under `src/adapters/<provider>/`.
 
 ## Commands
 
-This repo uses **pnpm 10** and **Node 22**. The root package and `mini-app/` are
+This repo uses **pnpm 10** and **Node 26**. The root package and `mini-app/` are
 separate pnpm packages.
 
 ```bash

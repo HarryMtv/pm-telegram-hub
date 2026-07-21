@@ -145,7 +145,7 @@ openspec/          OpenSpec spec-driven workflow (changes, archived specs)
 
 ## Build and test commands
 
-This repo uses **pnpm 10** and **Node 22** (see `.nvmrc`, `engines` in
+This repo uses **pnpm 10** and **Node 26** (see `.nvmrc`, `engines` in
 `package.json`). The root package and `mini-app/` are separate pnpm packages
 (each has its own lockfile) — run `pnpm install` in both.
 

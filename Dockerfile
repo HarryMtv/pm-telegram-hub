@@ -1,5 +1,5 @@
 # ── backend build stage ───────────────────────────────────────────────────────
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
@@ -11,7 +11,7 @@ COPY migrations ./migrations
 RUN pnpm run build
 
 # ── Mini App build stage (separate pnpm package) ──────────────────────────────
-FROM node:22-alpine AS miniapp-build
+FROM node:26-alpine AS miniapp-build
 WORKDIR /app/mini-app
 RUN corepack enable
 COPY mini-app/package.json mini-app/pnpm-lock.yaml ./
@@ -20,7 +20,7 @@ COPY mini-app/ ./
 RUN pnpm run build
 
 # ── runtime stage (shared by app + worker) ────────────────────────────────────
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 RUN corepack enable

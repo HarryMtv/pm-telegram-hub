@@ -95,7 +95,7 @@ Provider webhooks ─► POST /webhooks/:provider ─► BullMQ (Redis) ─► w
                                     Notifier (rate-limited) → Telegram Bot API
 ```
 
-- **Integration Service** — Fastify 5, TypeScript, Node 22. Hosts the webhook
+- **Integration Service** — Fastify 5, TypeScript, Node 26. Hosts the webhook
   endpoint, the grammY bot (webhook or polling), and shared modules.
 - **Worker** — separate BullMQ worker process; scales independently.
 - **DB** — Supabase (PostgreSQL). Provider-agnostic schema; credentials and
@@ -129,7 +129,7 @@ docker/            nginx config (TLS, routing)
 
 ### Prerequisites
 
-- Node.js 22 LTS (`.nvmrc`)
+- Node.js 26 (`.nvmrc`)
 - pnpm 10 (`corepack enable`)
 - A Telegram bot token (talk to [@BotFather](https://t.me/BotFather))
 - A Supabase project (URL + service role key + the project JWT secret)
