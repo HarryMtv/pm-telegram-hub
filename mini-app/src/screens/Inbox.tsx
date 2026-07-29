@@ -24,6 +24,11 @@ import { Plus, Search } from 'lucide-react';
 import { CreateTask } from './CreateTask';
 import { TaskDetail } from './TaskDetail';
 
+/** First-letter capitalize for a provider id shown in the filter (e.g. clickup → Clickup). */
+function titleCase(s: string): string {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+}
+
 export function Inbox() {
   const { push } = useNav();
   const { filters, setText, setProvider, setCategory, setView } = useInboxFilters();
@@ -82,13 +87,13 @@ export function Inbox() {
       <div className="flex flex-wrap items-center gap-2">
         <Select value={provider} onValueChange={setProvider}>
           <SelectTrigger className="min-w-[8rem] flex-1">
-            <SelectValue className="capitalize" />
+            <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All providers</SelectItem>
             {providers.map((p) => (
-              <SelectItem key={p} value={p} className="capitalize">
-                {p}
+              <SelectItem key={p} value={p}>
+                {titleCase(p)}
               </SelectItem>
             ))}
           </SelectContent>
