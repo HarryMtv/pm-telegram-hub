@@ -13,7 +13,7 @@ export function TaskCard({ task, onClick }: { task: FeedTask; onClick?: () => vo
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-2 px-3">
-        <p className="text-sm font-medium leading-snug">{task.name}</p>
+        <p className="min-w-0 break-words text-sm font-medium leading-snug">{task.name}</p>
         <Badge variant="outline" className="shrink-0 capitalize">
           {task.provider}
         </Badge>

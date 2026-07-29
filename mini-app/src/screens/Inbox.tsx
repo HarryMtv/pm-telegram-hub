@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { api } from '@/api';
 import { EmptyState, Screen } from '@/components/Screen';
 import { TaskCard } from '@/components/TaskCard';
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useInboxFilters } from '@/lib/inbox-filters';
 import { useNav } from '@/lib/nav';
 import { qk } from '@/lib/query';
 import { STATUS_META, STATUS_ORDER } from '@/lib/status';
@@ -25,16 +26,25 @@ import { TaskDetail } from './TaskDetail';
 
 export function Inbox() {
   const { push } = useNav();
-  const [text, setText] = useState('');
-  const [provider, setProvider] = useState<string>('all');
-  const [category, setCategory] = useState<string>('all');
-  const [view, setView] = useState<'list' | 'board'>('list');
+  const { filters, setText, setProvider, setCategory, setView } = useInboxFilters();
+  const { text, provider, category, view } = filters;
 
   const connsQ = useQuery({
     queryKey: qk.connections,
     queryFn: () => api('/api/connections') as Promise<{ connections: Connection[] }>,
   });
-  const providers = Array.from(new Set((connsQ.data?.connections ?? []).map((c) => c.provider)));
+  const providers = useMemo(
+    () => Array.from(new Set((connsQ.data?.connections ?? []).map((c) => c.provider))),
+    [connsQ.data],
+  );
+
+  // A persisted filter can reference a provider that has since been disconnected.
+  // Drop back to "all" so the trigger never shows a stale/blank selection.
+  useEffect(() => {
+    if (provider !== 'all' && !providers.includes(provider)) {
+      setProvider('all');
+    }
+  }, [providers, provider, setProvider]);
 
   const params: Record<string, string> = {};
   if (text) params.text = text;
@@ -69,10 +79,10 @@ export function Inbox() {
         />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Select value={provider} onValueChange={setProvider}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
+          <SelectTrigger className="min-w-[8rem] flex-1">
+            <SelectValue className="capitalize" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All providers</SelectItem>
@@ -84,7 +94,7 @@ export function Inbox() {
           </SelectContent>
         </Select>
         <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-36">
+          <SelectTrigger className="min-w-[8rem] flex-1">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -96,11 +106,7 @@ export function Inbox() {
             ))}
           </SelectContent>
         </Select>
-        <Tabs
-          value={view}
-          onValueChange={(v) => setView(v as 'list' | 'board')}
-          className="ml-auto"
-        >
+        <Tabs value={view} onValueChange={(v) => setView(v as 'list' | 'board')}>
           <TabsList>
             <TabsTrigger value="list">List</TabsTrigger>
             <TabsTrigger value="board">Board</TabsTrigger>

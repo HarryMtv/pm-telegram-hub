@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { BottomTabs } from '@/components/BottomTabs';
+import { InboxFiltersProvider } from '@/lib/inbox-filters';
 import { NavProvider, type TabKey } from '@/lib/nav';
 import { Connections } from '@/screens/Connections';
 import { Inbox } from '@/screens/Inbox';
@@ -52,13 +53,15 @@ export function App() {
   };
 
   return (
-    <NavProvider tabs={tabs}>
-      {(screen) => (
-        <>
-          {screen}
-          <BottomTabs />
-        </>
-      )}
-    </NavProvider>
+    <InboxFiltersProvider>
+      <NavProvider tabs={tabs}>
+        {(screen) => (
+          <>
+            {screen}
+            <BottomTabs />
+          </>
+        )}
+      </NavProvider>
+    </InboxFiltersProvider>
   );
 }

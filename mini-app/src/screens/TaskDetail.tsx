@@ -74,7 +74,9 @@ export function TaskDetail({ task }: { task: FeedTask }) {
       <Card>
         <CardHeader className="gap-2">
           <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-base leading-snug">{detail.name}</CardTitle>
+            <CardTitle className="min-w-0 break-words text-base leading-snug">
+              {detail.name}
+            </CardTitle>
             <Badge variant="outline" className="shrink-0 capitalize">
               {detail.provider}
             </Badge>
@@ -88,7 +90,7 @@ export function TaskDetail({ task }: { task: FeedTask }) {
           {detailQ.isLoading ? (
             <Skeleton className="h-12 w-full" />
           ) : detail.description ? (
-            <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+            <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
               {detail.description}
             </p>
           ) : null}
