@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # Local Claude Code settings temp files
 .claude/*.tmp.*
+
+# graphify knowledge-graph build output (regenerable via /graphify)
+graphify-out/
