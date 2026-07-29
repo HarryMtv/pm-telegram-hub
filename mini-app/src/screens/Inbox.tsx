@@ -17,6 +17,7 @@ import { useNav } from '@/lib/nav';
 import { qk } from '@/lib/query';
 import { STATUS_META, STATUS_ORDER } from '@/lib/status';
 import type { Connection, FeedTask, StatusCategory } from '@/lib/types';
+import { useDebounce } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Search } from 'lucide-react';
 
@@ -36,8 +37,10 @@ export function Inbox() {
   });
   const providers = Array.from(new Set((connsQ.data?.connections ?? []).map((c) => c.provider)));
 
+  const debouncedText = useDebounce(text, 300);
+
   const params: Record<string, string> = {};
-  if (text) params.text = text;
+  if (debouncedText) params.text = debouncedText;
   if (provider !== 'all') params.provider = provider;
   if (category !== 'all') params.statusCategory = category;
 
