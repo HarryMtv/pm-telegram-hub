@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '@/api';
-import { Screen } from '@/components/Screen';
+import { EmptyState, Screen } from '@/components/Screen';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { qk } from '@/lib/query';
 import { STATUS_META } from '@/lib/status';
 import { haptic } from '@/lib/telegram';
-import type { FeedTask, StatusDef } from '@/lib/types';
+import type { Comment, FeedTask, StatusDef } from '@/lib/types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
@@ -39,6 +39,13 @@ export function TaskDetail({ task }: { task: FeedTask }) {
 
   const detail = detailQ.data?.task ?? task;
   const statuses = statusesQ.data?.statuses ?? [];
+
+  const commentsQ = useQuery({
+    queryKey: qk.taskComments(connectionId, id),
+    queryFn: () =>
+      api(`/api/tasks/${connectionId}/${id}/comments`) as Promise<{ comments: Comment[] }>,
+  });
+  const comments = commentsQ.data?.comments ?? [];
 
   const setStatus = useMutation({
     mutationFn: (statusId: string) =>
@@ -64,6 +71,7 @@ export function TaskDetail({ task }: { task: FeedTask }) {
       haptic.notify('success');
       toast.success('Comment posted');
       setComment('');
+      void qc.invalidateQueries({ queryKey: qk.taskComments(connectionId, id) });
     },
   });
 
@@ -104,6 +112,59 @@ export function TaskDetail({ task }: { task: FeedTask }) {
 
       <Card>
         <CardHeader>
+          <CardTitle className="text-base">Comments</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {commentsQ.isLoading ? (
+            <Skeleton className="h-16 w-full" />
+          ) : comments.length === 0 ? (
+            <EmptyState>No comments yet.</EmptyState>
+          ) : (
+            <ul className="space-y-3">
+              {comments.map((c) => (
+                <li key={c.id} className="space-y-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="min-w-0 truncate text-sm font-medium">{c.authorName}</span>
+                    {c.createdAt && (
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatTimestamp(c.createdAt)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                    {c.body}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <Label htmlFor="comment" className="sr-only">
+            Comment
+          </Label>
+          <Textarea
+            id="comment"
+            placeholder="Write a comment…"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+          />
+          <Button
+            className="w-full"
+            disabled={!comment.trim() || addComment.isPending}
+            onClick={() => addComment.mutate(comment.trim())}
+          >
+            {addComment.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Send className="size-4" />
+            )}
+            Post comment
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle className="text-base">Change status</CardTitle>
         </CardHeader>
         <CardContent>
@@ -129,35 +190,18 @@ export function TaskDetail({ task }: { task: FeedTask }) {
           )}
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Comment</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Label htmlFor="comment" className="sr-only">
-            Comment
-          </Label>
-          <Textarea
-            id="comment"
-            placeholder="Write a comment…"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-          />
-          <Button
-            className="w-full"
-            disabled={!comment.trim() || addComment.isPending}
-            onClick={() => addComment.mutate(comment.trim())}
-          >
-            {addComment.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Send className="size-4" />
-            )}
-            Post comment
-          </Button>
-        </CardContent>
-      </Card>
     </Screen>
   );
+}
+
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 }

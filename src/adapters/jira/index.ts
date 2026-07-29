@@ -1,10 +1,11 @@
 import { verifyHexHmac } from '../../crypto/index.js';
-import type { Container, StatusDef, UnifiedEvent, UnifiedTask } from '../../models/unified.js';
+import type { Comment, Container, StatusDef, UnifiedEvent, UnifiedTask } from '../../models/unified.js';
 import { providerFetch } from '../http.js';
 import type { ProviderAdapter } from '../provider-adapter.js';
 import type {
   AccountInfo,
   AdapterCapabilities,
+  CommentListOptions,
   Connection,
   CreateTaskInput,
   CredentialField,
@@ -38,6 +39,14 @@ interface JiraIssue {
     duedate?: string;
     project?: { id?: string };
   };
+}
+
+/** A Jira issue comment (GET /rest/api/3/issue/{id}/comment). `body` is ADF. */
+interface JiraComment {
+  id?: string;
+  author?: { accountId?: string; displayName?: string };
+  body?: unknown; // ADF
+  created?: string;
 }
 
 /** Unified status category → Jira `statusCategory` JQL value. No Jira category maps to 'cancelled'. */
@@ -165,6 +174,24 @@ export class JiraAdapter implements ProviderAdapter {
     await this.call(creds, 'POST', `/rest/api/3/issue/${taskId}/comment`, {
       body: JSON.stringify({ body: textToAdf(text) }),
     });
+  }
+
+  async listComments(
+    creds: ProviderCredentials,
+    taskId: string,
+    opts: CommentListOptions = {},
+  ): Promise<Comment[]> {
+    const res = await this.call(creds, 'GET', `/rest/api/3/issue/${taskId}/comment`);
+    const comments = ((res.data as { comments?: JiraComment[] }).comments ?? [])
+      .map((c) => ({
+        id: String(c.id ?? ''),
+        authorName: c.author?.displayName ?? c.author?.accountId ?? 'Unknown',
+        authorId: c.author?.accountId,
+        body: adfToText(c.body),
+        createdAt: c.created,
+      }))
+      .sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
+    return opts.limit ? comments.slice(0, opts.limit) : comments;
   }
 
   async getTask(creds: ProviderCredentials, taskId: string): Promise<UnifiedTask> {

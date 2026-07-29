@@ -82,3 +82,21 @@ export interface UnifiedTask {
   url: string;
   containerId: string;
 }
+
+/**
+ * A task comment (Mini App task detail). The core consumes comments only through
+ * this type; providers flatten their own formats (Jira ADF, Wrike HTML) to plain
+ * text inside the adapter. Ordered oldest-first by the adapter.
+ */
+export interface Comment {
+  /** Stable provider comment id. */
+  id: string;
+  /** Display name; falls back to authorId/“Unknown” when the provider has none. */
+  authorName: string;
+  /** Stable provider user id when available. */
+  authorId?: string;
+  /** Always plain text. */
+  body: string;
+  /** ISO 8601 creation timestamp. */
+  createdAt?: string;
+}

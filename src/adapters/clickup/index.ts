@@ -1,12 +1,13 @@
 import { config } from '../../config/index.js';
 import { verifyHexHmac } from '../../crypto/index.js';
-import type { Container, StatusDef, UnifiedEvent, UnifiedTask } from '../../models/unified.js';
+import type { Comment, Container, StatusDef, UnifiedEvent, UnifiedTask } from '../../models/unified.js';
 import { currentConnection } from '../context.js';
 import { providerFetch } from '../http.js';
 import type { ProviderAdapter } from '../provider-adapter.js';
 import type {
   AccountInfo,
   AdapterCapabilities,
+  CommentListOptions,
   CommentOptions,
   Connection,
   CreateTaskInput,
@@ -30,6 +31,16 @@ import {
 } from './mapping.js';
 
 const BASE = 'https://api.clickup.com/api/v2';
+
+/** A ClickUp task comment (GET /task/{id}/comment). `comment_text` is the plain-text
+ *  rendering; the `comment` array carries rich segments (text + @mention tags). */
+interface ClickUpComment {
+  id?: string | number;
+  comment_text?: string;
+  comment?: Array<{ text?: string } | null>;
+  user?: { id?: string | number; username?: string };
+  date?: string; // epoch-ms
+}
 
 /** ClickUp adapter (spec §4.1). Personal token; one event per request; minimal payload. */
 export class ClickUpAdapter implements ProviderAdapter {
@@ -181,6 +192,18 @@ export class ClickUpAdapter implements ProviderAdapter {
           }
         : { comment_text: text };
     await this.call(creds, 'POST', `/task/${taskId}/comment`, { body: JSON.stringify(body) });
+  }
+
+  async listComments(
+    creds: ProviderCredentials,
+    taskId: string,
+    opts: CommentListOptions = {},
+  ): Promise<Comment[]> {
+    const res = await this.call(creds, 'GET', `/task/${taskId}/comment`);
+    const comments = ((res.data as { comments?: ClickUpComment[] }).comments ?? [])
+      .map((c) => this.toComment(c))
+      .sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
+    return opts.limit ? comments.slice(0, opts.limit) : comments;
   }
 
   async getTask(creds: ProviderCredentials, taskId: string): Promise<UnifiedTask> {
@@ -349,6 +372,21 @@ export class ClickUpAdapter implements ProviderAdapter {
       dueDate: task.due_date ? String(task.due_date) : undefined,
       url: task.url,
       containerId: task.list ? String(task.list.id) : '',
+    };
+  }
+
+  private toComment(c: ClickUpComment): Comment {
+    const segments = Array.isArray(c.comment) ? c.comment : [];
+    const body =
+      (c.comment_text ?? '').trim() ||
+      segments.map((seg) => (seg?.text ?? '')).join('').trim();
+    const user = c.user ?? {};
+    return {
+      id: String(c.id ?? ''),
+      authorName: user.username ?? (user.id != null ? String(user.id) : 'Unknown'),
+      authorId: user.id != null ? String(user.id) : undefined,
+      body,
+      createdAt: c.date ? new Date(Number(c.date)).toISOString() : undefined,
     };
   }
 }

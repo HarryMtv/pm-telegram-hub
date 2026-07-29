@@ -62,6 +62,15 @@ export interface FeedTask {
   containerId: string;
 }
 
+/** A task comment (mirrors the backend unified Comment). */
+export interface Comment {
+  id: string;
+  authorName: string;
+  authorId?: string;
+  body: string;
+  createdAt?: string;
+}
+
 /** Unified webhook event types (spec §2.2) — kept in sync with the backend. */
 export const EVENT_TYPES: { value: string; label: string }[] = [
   { value: 'task.created', label: 'Task created' },

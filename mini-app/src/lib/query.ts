@@ -35,4 +35,6 @@ export const qk = {
   task: (connectionId: string, taskId: string) => ['task', connectionId, taskId] as const,
   taskStatuses: (connectionId: string, taskId: string) =>
     ['task-statuses', connectionId, taskId] as const,
+  taskComments: (connectionId: string, taskId: string) =>
+    ['task-comments', connectionId, taskId] as const,
 };

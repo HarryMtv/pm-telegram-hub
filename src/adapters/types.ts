@@ -94,6 +94,12 @@ export interface CommentOptions {
   mentions?: string[];
 }
 
+/** Options for listComments. */
+export interface CommentListOptions {
+  /** Max comments to return (adapter default applies when omitted). */
+  limit?: number;
+}
+
 /**
  * Filters for `listTasks` (Mini App unified inbox). All fields are optional; an
  * empty query lists the connection's tasks. The adapter applies what the provider

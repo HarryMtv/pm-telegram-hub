@@ -5,6 +5,7 @@ import { telegramIdFromAuth } from '../auth/jwt.js';
 import { getConnectionById } from '../db/connections.js';
 import { upsertSubscription } from '../db/subscriptions.js';
 import { getUserByTelegramId } from '../db/users.js';
+import { runWithConnection } from '../services/adapter-runner.js';
 import { disconnectProvider } from '../services/connection-service.js';
 import { register } from './routes.js';
 
@@ -24,6 +25,9 @@ vi.mock('../db/subscriptions.js', () => ({
 vi.mock('../services/connection-service.js', () => ({
   connectProvider: vi.fn(),
   disconnectProvider: vi.fn(),
+}));
+vi.mock('../services/adapter-runner.js', () => ({
+  runWithConnection: vi.fn(),
 }));
 
 const auth = { authorization: 'Bearer t' };
@@ -94,5 +98,41 @@ describe('POST /api/subscriptions personal-chat resolution', () => {
 
     expect(res.statusCode).toBe(404);
     expect(vi.mocked(upsertSubscription)).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/tasks/:connectionId/:taskId/comments', () => {
+  it('returns the thread for the connection owner', async () => {
+    vi.mocked(telegramIdFromAuth).mockReturnValue(555);
+    vi.mocked(getUserByTelegramId).mockResolvedValue({ id: 'u1', telegram_id: '555' } as never);
+    vi.mocked(getConnectionById).mockResolvedValue({ id: 'c1', user_id: 'u1' } as never);
+    const comments = [
+      { id: 'c1', authorName: 'Alice', body: 'hi', createdAt: '2026-01-01T00:00:00Z' },
+    ];
+    vi.mocked(runWithConnection).mockResolvedValue(comments as never);
+
+    const app = await buildApp();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/tasks/c1/t1/comments',
+      headers: auth,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(res.payload).comments).toEqual(comments);
+  });
+
+  it('rejects a non-owner (404) without calling the adapter', async () => {
+    vi.mocked(telegramIdFromAuth).mockReturnValue(555);
+    vi.mocked(getUserByTelegramId).mockResolvedValue({ id: 'u1', telegram_id: '555' } as never);
+    vi.mocked(getConnectionById).mockResolvedValue({ id: 'c1', user_id: 'other' } as never);
+
+    const app = await buildApp();
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/tasks/c1/t1/comments',
+      headers: auth,
+    });
+    expect(res.statusCode).toBe(404);
+    expect(vi.mocked(runWithConnection)).not.toHaveBeenCalled();
   });
 });

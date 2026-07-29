@@ -1,7 +1,8 @@
-import type { Container, StatusDef, UnifiedEvent, UnifiedTask } from '../models/unified.js';
+import type { Comment, Container, StatusDef, UnifiedEvent, UnifiedTask } from '../models/unified.js';
 import type {
   AccountInfo,
   AdapterCapabilities,
+  CommentListOptions,
   CommentOptions,
   Connection,
   CreateTaskInput,
@@ -94,6 +95,19 @@ export interface ProviderAdapter {
     text: string,
     opts?: CommentOptions,
   ): Promise<void>;
+
+  /**
+   * List a task's comments as unified Comments (Mini App task detail) — the read
+   * counterpart to `addComment`. Runs through the connection owner's rate limiter,
+   * ALWAYS returns an array, ordered oldest-first. The core calls this without
+   * branching on the provider name.
+   */
+  listComments(
+    creds: ProviderCredentials,
+    taskId: string,
+    opts?: CommentListOptions,
+  ): Promise<Comment[]>;
+
   getTask(creds: ProviderCredentials, taskId: string): Promise<UnifiedTask>;
 
   /**

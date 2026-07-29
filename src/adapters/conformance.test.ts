@@ -121,6 +121,39 @@ describe('listTasks (unified inbox)', () => {
   });
 });
 
+describe('listComments (task detail)', () => {
+  const fake = new FakeAdapter({
+    comments: {
+      t1: [
+        {
+          id: 'c1',
+          authorName: 'Alice',
+          authorId: 'a1',
+          body: 'First',
+          createdAt: '2026-01-01T00:00:00Z',
+        },
+        { id: 'c2', authorName: 'Bob', body: 'Second', createdAt: '2026-01-02T00:00:00Z' },
+      ],
+    },
+  });
+
+  it('returns the task comments', async () => {
+    const comments = await fake.listComments({}, 't1');
+    expect(comments.map((c) => c.id)).toEqual(['c1', 'c2']);
+  });
+
+  it('limits the returned comments', async () => {
+    const comments = await fake.listComments({}, 't1', { limit: 1 });
+    expect(comments).toHaveLength(1);
+    expect(comments[0]?.id).toBe('c1');
+  });
+
+  it('returns an empty array when there are no comments', async () => {
+    const comments = await fake.listComments({}, 'no-such-task');
+    expect(comments).toEqual([]);
+  });
+});
+
 describe('unified status resolution (inline buttons)', () => {
   it('picks the done status by category with no provider knowledge', async () => {
     const fake = new FakeAdapter({});

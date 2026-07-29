@@ -1,12 +1,13 @@
 import { config } from '../../config/index.js';
 import { hmacSha256, verifyHexHmac } from '../../crypto/index.js';
-import type { Container, StatusDef, UnifiedEvent, UnifiedTask } from '../../models/unified.js';
+import type { Comment, Container, StatusDef, UnifiedEvent, UnifiedTask } from '../../models/unified.js';
 import { currentConnection } from '../context.js';
 import { providerFetch } from '../http.js';
 import type { ProviderAdapter } from '../provider-adapter.js';
 import type {
   AccountInfo,
   AdapterCapabilities,
+  CommentListOptions,
   Connection,
   CreateTaskInput,
   CredentialField,
@@ -32,6 +33,14 @@ import {
 } from './mapping.js';
 
 const BASE = 'https://www.wrike.com/api/v4';
+
+/** A Wrike task comment (GET /tasks/{id}/comments). */
+interface WrikeComment {
+  id?: string;
+  text?: string;
+  authorId?: string;
+  createdAt?: string;
+}
 
 /**
  * Wrike adapter (spec §4.2). Bearer token; batched events; handshake on
@@ -223,6 +232,31 @@ export class WrikeAdapter implements ProviderAdapter {
 
   async addComment(creds: ProviderCredentials, taskId: string, text: string): Promise<void> {
     await this.call(creds, 'POST', `/tasks/${taskId}/comments`, { searchParams: { text } });
+  }
+
+  async listComments(
+    creds: ProviderCredentials,
+    taskId: string,
+    opts: CommentListOptions = {},
+  ): Promise<Comment[]> {
+    const res = await this.call(creds, 'GET', `/tasks/${taskId}/comments`);
+    const raw = (res.data as { data?: WrikeComment[] }).data ?? [];
+    const authorIds = Array.from(
+      new Set(raw.map((c) => c.authorId).filter((id): id is string => !!id)),
+    );
+    const names = authorIds.length
+      ? await this.getContactNames(creds, authorIds)
+      : new Map<string, string>();
+    const comments = raw
+      .map((c) => ({
+        id: String(c.id ?? ''),
+        authorName: (c.authorId && (names.get(c.authorId) ?? c.authorId)) || 'Unknown',
+        authorId: c.authorId,
+        body: wrikeHtmlToText(c.text ?? '') ?? '',
+        createdAt: c.createdAt,
+      }))
+      .sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
+    return opts.limit ? comments.slice(0, opts.limit) : comments;
   }
 
   async getTask(creds: ProviderCredentials, taskId: string): Promise<UnifiedTask> {

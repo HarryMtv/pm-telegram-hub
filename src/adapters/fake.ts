@@ -1,9 +1,10 @@
 import { verifyHexHmac } from '../crypto/index.js';
-import type { Container, StatusDef, UnifiedEvent, UnifiedTask } from '../models/unified.js';
+import type { Comment, Container, StatusDef, UnifiedEvent, UnifiedTask } from '../models/unified.js';
 import type { ProviderAdapter } from './provider-adapter.js';
 import type {
   AccountInfo,
   AdapterCapabilities,
+  CommentListOptions,
   Connection,
   CreateTaskInput,
   CredentialField,
@@ -29,6 +30,8 @@ export interface FakeAdapterConfig {
   events?: UnifiedEvent[];
   /** Map of taskId → enriched fields returned by enrichEvent/getTask. */
   tasks?: Record<string, Partial<UnifiedTask>>;
+  /** Map of taskId → comments returned by listComments. */
+  comments?: Record<string, Comment[]>;
   statuses?: StatusDef[];
   secret?: string;
 }
@@ -38,6 +41,7 @@ export class FakeAdapter implements ProviderAdapter {
   private readonly caps: AdapterCapabilities;
   private readonly events: UnifiedEvent[];
   private readonly tasks: Record<string, Partial<UnifiedTask>>;
+  private readonly comments: Record<string, Comment[]>;
   private readonly statuses: StatusDef[];
   readonly secret: string;
 
@@ -48,6 +52,7 @@ export class FakeAdapter implements ProviderAdapter {
     this.caps = cfg.capabilities ?? { webhookSetup: 'auto', payload: 'minimal' };
     this.events = cfg.events ?? [];
     this.tasks = cfg.tasks ?? {};
+    this.comments = cfg.comments ?? {};
     this.statuses = cfg.statuses ?? [
       { id: 'open', name: 'Open', category: 'open' },
       { id: 'progress', name: 'In Progress', category: 'in_progress' },
@@ -127,6 +132,15 @@ export class FakeAdapter implements ProviderAdapter {
   ): Promise<void> {}
   async setStatus(_creds: ProviderCredentials, _taskId: string, _statusId: string): Promise<void> {}
   async addComment(_creds: ProviderCredentials, _taskId: string, _text: string): Promise<void> {}
+
+  async listComments(
+    _creds: ProviderCredentials,
+    taskId: string,
+    opts: CommentListOptions = {},
+  ): Promise<Comment[]> {
+    const comments = (this.comments[taskId] ?? []).slice();
+    return opts.limit ? comments.slice(0, opts.limit) : comments;
+  }
 
   async getTask(_creds: ProviderCredentials, taskId: string): Promise<UnifiedTask> {
     return this.toTask(taskId, this.tasks[taskId]);

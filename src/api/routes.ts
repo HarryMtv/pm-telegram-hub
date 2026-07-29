@@ -305,6 +305,22 @@ export async function register(app: FastifyInstance): Promise<void> {
     }
   });
 
+  app.get('/api/tasks/:connectionId/:taskId/comments', async (req, reply) => {
+    const user = await requireUser(req, reply);
+    if (!user) return;
+    const { connectionId, taskId } = req.params as { connectionId: string; taskId: string };
+    const conn = await ownedConnection(user.id, connectionId, reply);
+    if (!conn) return;
+    try {
+      const comments = await runWithConnection(conn, (adapter, creds) =>
+        adapter.listComments(creds, taskId),
+      );
+      return reply.send({ comments });
+    } catch (err) {
+      return reply.code(400).send({ error: (err as Error).message });
+    }
+  });
+
   // ── Mappings ──────────────────────────────────────────────────────────────────
 
   app.get('/api/mappings', async (req, reply) => {
