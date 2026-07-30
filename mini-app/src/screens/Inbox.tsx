@@ -18,6 +18,7 @@ import { useNav } from '@/lib/nav';
 import { qk } from '@/lib/query';
 import { STATUS_META, STATUS_ORDER } from '@/lib/status';
 import type { Connection, FeedTask, StatusCategory } from '@/lib/types';
+import { useDebounce } from '@/lib/use-debounce';
 import { useQuery } from '@tanstack/react-query';
 import { Plus, Search } from 'lucide-react';
 
@@ -33,6 +34,10 @@ export function Inbox() {
   const { push } = useNav();
   const { filters, setText, setProvider, setCategory, setView } = useInboxFilters();
   const { text, provider, category, view } = filters;
+
+  // Optimization: Debounce the search input to prevent firing API requests
+  // on every keystroke. This reduces unnecessary network traffic and server load.
+  const debouncedText = useDebounce(text, 300);
 
   const connsQ = useQuery({
     queryKey: qk.connections,
@@ -52,7 +57,7 @@ export function Inbox() {
   }, [providers, provider, setProvider]);
 
   const params: Record<string, string> = {};
-  if (text) params.text = text;
+  if (debouncedText) params.text = debouncedText;
   if (provider !== 'all') params.provider = provider;
   if (category !== 'all') params.statusCategory = category;
 
