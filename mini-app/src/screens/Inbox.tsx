@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useInboxFilters } from '@/lib/inbox-filters';
 import { useNav } from '@/lib/nav';
 import { qk } from '@/lib/query';
+import { useDebounce } from '@/lib/use-debounce';
 import { STATUS_META, STATUS_ORDER } from '@/lib/status';
 import type { Connection, FeedTask, StatusCategory } from '@/lib/types';
 import { useQuery } from '@tanstack/react-query';
@@ -33,6 +34,9 @@ export function Inbox() {
   const { push } = useNav();
   const { filters, setText, setProvider, setCategory, setView } = useInboxFilters();
   const { text, provider, category, view } = filters;
+
+  // ⚡ Bolt: Debounce the search text to prevent excessive API calls while typing
+  const debouncedText = useDebounce(text, 300);
 
   const connsQ = useQuery({
     queryKey: qk.connections,
@@ -52,7 +56,7 @@ export function Inbox() {
   }, [providers, provider, setProvider]);
 
   const params: Record<string, string> = {};
-  if (text) params.text = text;
+  if (debouncedText) params.text = debouncedText;
   if (provider !== 'all') params.provider = provider;
   if (category !== 'all') params.statusCategory = category;
 
