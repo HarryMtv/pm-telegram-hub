@@ -93,6 +93,34 @@ describe('Jira status mapping', () => {
     });
     expect(s).toEqual({ id: '31', name: 'Done', category: 'done' });
   });
+
+  it('returns null if transition id is missing', () => {
+    expect(mapJiraTransition({ name: 'Done' })).toBeNull();
+  });
+
+  it('uses transition name if to.name is missing', () => {
+    const s = mapJiraTransition({
+      id: '31',
+      name: 'TransitionName',
+      to: { statusCategory: { key: 'done' } },
+    });
+    expect(s).toEqual({ id: '31', name: 'TransitionName', category: 'done' });
+  });
+
+  it('falls back to transition id for name if both to.name and name are missing', () => {
+    const s = mapJiraTransition({
+      id: '31',
+    });
+    expect(s).toEqual({ id: '31', name: '31', category: 'open' });
+  });
+
+  it('handles missing to object gracefully', () => {
+    const s = mapJiraTransition({
+      id: '32',
+      name: 'Next',
+    });
+    expect(s).toEqual({ id: '32', name: 'Next', category: 'open' });
+  });
 });
 
 describe('ADF conversion', () => {
