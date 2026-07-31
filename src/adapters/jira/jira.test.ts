@@ -94,11 +94,14 @@ describe('Jira status mapping', () => {
     expect(s).toEqual({ id: '31', name: 'Done', category: 'done' });
   });
 
-  it('returns null if transition id is missing', () => {
+  it('returns null when the transition has no usable id', () => {
     expect(mapJiraTransition({ name: 'Done' })).toBeNull();
+    // The guard is `!t.id`, so a blank id is rejected too — `getAvailableStatuses`
+    // drops these rather than offering a transition Jira could never execute.
+    expect(mapJiraTransition({ id: '', to: { name: 'Done' } })).toBeNull();
   });
 
-  it('uses transition name if to.name is missing', () => {
+  it('uses the transition name when to.name is missing', () => {
     const s = mapJiraTransition({
       id: '31',
       name: 'TransitionName',
@@ -107,19 +110,29 @@ describe('Jira status mapping', () => {
     expect(s).toEqual({ id: '31', name: 'TransitionName', category: 'done' });
   });
 
-  it('falls back to transition id for name if both to.name and name are missing', () => {
-    const s = mapJiraTransition({
-      id: '31',
-    });
-    expect(s).toEqual({ id: '31', name: '31', category: 'open' });
+  it('falls back to the transition id when neither to.name nor name is set', () => {
+    expect(mapJiraTransition({ id: '31' })).toEqual({ id: '31', name: '31', category: 'open' });
   });
 
-  it('handles missing to object gracefully', () => {
+  it('keeps a blank to.name — `??` only falls through on null/undefined', () => {
+    const s = mapJiraTransition({ id: '31', name: 'Next', to: { name: '' } });
+    expect(s).toEqual({ id: '31', name: '', category: 'open' });
+  });
+
+  it('carries to.statusCategory through to the unified category', () => {
     const s = mapJiraTransition({
-      id: '32',
-      name: 'Next',
+      id: '21',
+      to: { name: 'In Progress', statusCategory: { key: 'indeterminate' } },
     });
-    expect(s).toEqual({ id: '32', name: 'Next', category: 'open' });
+    expect(s).toEqual({ id: '21', name: 'In Progress', category: 'in_progress' });
+  });
+
+  it('defaults to open when the statusCategory key is unrecognised', () => {
+    const s = mapJiraTransition({
+      id: '41',
+      to: { name: 'Parked', statusCategory: { key: 'weird' } },
+    });
+    expect(s).toEqual({ id: '41', name: 'Parked', category: 'open' });
   });
 });
 
