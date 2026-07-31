@@ -13,12 +13,13 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useDebounce } from '@/lib/debounce';
 import { useInboxFilters } from '@/lib/inbox-filters';
 import { useNav } from '@/lib/nav';
 import { qk } from '@/lib/query';
 import { STATUS_META, STATUS_ORDER } from '@/lib/status';
 import type { Connection, FeedTask, StatusCategory } from '@/lib/types';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Plus, Search } from 'lucide-react';
 
 import { CreateTask } from './CreateTask';
@@ -29,10 +30,18 @@ function titleCase(s: string): string {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 }
 
+/** How long typing has to settle before the search text reaches `/api/tasks`. */
+const SEARCH_DEBOUNCE_MS = 300;
+
 export function Inbox() {
   const { push } = useNav();
   const { filters, setText, setProvider, setCategory, setView } = useInboxFilters();
   const { text, provider, category, view } = filters;
+
+  // The input reads `text` so typing stays instant, while the query lags on
+  // `debouncedText` so a keystroke doesn't cost a request. Until the two agree,
+  // whatever the query returned answers the *previous* search — see `stale` below.
+  const debouncedText = useDebounce(text, SEARCH_DEBOUNCE_MS);
 
   const connsQ = useQuery({
     queryKey: qk.connections,
@@ -52,7 +61,7 @@ export function Inbox() {
   }, [providers, provider, setProvider]);
 
   const params: Record<string, string> = {};
-  if (text) params.text = text;
+  if (debouncedText) params.text = debouncedText;
   if (provider !== 'all') params.provider = provider;
   if (category !== 'all') params.statusCategory = category;
 
@@ -62,8 +71,15 @@ export function Inbox() {
       const qs = new URLSearchParams(params).toString();
       return api(`/api/tasks${qs ? `?${qs}` : ''}`) as Promise<{ tasks: FeedTask[] }>;
     },
+    // Hold the last result set while a new filter loads, so the list dims instead
+    // of collapsing into skeletons every time the debounce fires.
+    placeholderData: keepPreviousData,
   });
   const tasks = tasksQ.data?.tasks ?? [];
+
+  // True from the first keystroke until the matching results land: what's on
+  // screen is one search behind the input.
+  const stale = text !== debouncedText || tasksQ.isFetching;
 
   return (
     <Screen
@@ -126,19 +142,27 @@ export function Inbox() {
           <Skeleton className="h-16 w-full" />
         </div>
       ) : tasks.length === 0 ? (
-        <EmptyState>No tasks match.</EmptyState>
-      ) : view === 'list' ? (
-        <div className="space-y-2">
-          {tasks.map((t) => (
-            <TaskCard
-              key={`${t.connectionId}:${t.id}`}
-              task={t}
-              onClick={() => push(<TaskDetail task={t} />)}
-            />
-          ))}
-        </div>
+        // An empty result set while `stale` answers the previous search — stay
+        // quiet rather than claim nothing matches what was just typed.
+        stale ? null : (
+          <EmptyState>No tasks match.</EmptyState>
+        )
       ) : (
-        <Board tasks={tasks} onOpen={(t) => push(<TaskDetail task={t} />)} />
+        <div className={stale ? 'opacity-50 transition-opacity' : 'transition-opacity'}>
+          {view === 'list' ? (
+            <div className="space-y-2">
+              {tasks.map((t) => (
+                <TaskCard
+                  key={`${t.connectionId}:${t.id}`}
+                  task={t}
+                  onClick={() => push(<TaskDetail task={t} />)}
+                />
+              ))}
+            </div>
+          ) : (
+            <Board tasks={tasks} onOpen={(t) => push(<TaskDetail task={t} />)} />
+          )}
+        </div>
       )}
     </Screen>
   );
